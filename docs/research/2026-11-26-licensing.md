@@ -57,3 +57,10 @@ Scan method: each package file at MVP@4c004a59 was searched for license, copyrig
 8. **MVP packages:** the Belmontes notices assert copyright without granting redistribution. ISPF (McLaughlin) and several CBT-derived packages carry no grant either. Combined with question 1, this supports shipping **scripts only, never images**. Should OSE ask the authors for explicit terms? (Outreach: the human decides.)
 9. **brexx370 and cc370:** settle GPL-2.0-only vs -or-later by reading source headers, before OSE ships anything that links or bundles them.
 
+
+## Addendum (OSE-004, 2026-11-26): maclib370
+
+- **What it is:** maclib370 v1.0.0 `e85286a7` (lock entry added by OSE-004 after human approval). It holds IBM MVS 3.8j `SYS1.MACLIB` and `SYS1.AMODGEN` members, taken from a TK5 Update 5 system and including TK5 usermods.
+- **Evidence:** `LICENSE` is MIT but covers only the tools, `MANIFEST.tsv` and the README. The README says of the macros: "This repository records where they came from; it makes no statement about them beyond that, and `LICENSE` does not cover them." Recorded as UNRESOLVED.
+- **Relevance:** the macros are used at build time, and their expansions end up in every libc370 object and therefore in every OSE load module. This is the same territory as question 1 (IBM MVS 3.8j material) and the MACLIB row above.
+- **Question 10 for the human maintainer:** may OSE redistribute build outputs (load modules, XMITs) that contain expansions of these macros, and may it redistribute maclib370 itself, for example inside a toolchain image? Until this is answered, OSE ships build **scripts** that fetch maclib370 at its pin, never a bundled copy.

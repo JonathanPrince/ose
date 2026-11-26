@@ -1,15 +1,15 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: READY (host part; OSE-002 VERIFIED 2026-11-26; guest part needs the OSE-003 image)
+Status: REVIEW (host portion accepted by independent re-review and merged to main 2026-11-26 on the human maintainer's instruction; guest acceptance 2-4 remain open)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
-Owner:
+Owner: author model (standard tier)
 Risk: medium
 Model tier: standard
 Reviewer tier: standard
 Budget: local-only
 Branch: task/OSE-004-hello-harness
 Guest resources: lease required for deploy and run
-Baseline commit:
+Baseline commit: 5970f87 (main)
 
 ## Goal and non-goals
 Goal: compile and link a C "hello" on the host with the pinned CC/370 and MBT (spec §2 prefers host compilation). Deploy the load module to the guest, run it as a batch job and as a TSO command, and capture RC and output automatically. Record the observed C dialect and linkage facts.
@@ -34,10 +34,52 @@ mvslovers/cc370, libc370 and mbt at their pins, and their docs at mvslovers.read
 
 ## Handoff
 - Changed files / commits:
-- Commands run, RC, evidence paths:
+  - New: `scripts/build.sh`, `src/utils/hello/hello.c`, `docs/research/2026-11-26-toolchain.md` (with addendum T-7), `docs/runbooks/hello-compile-deploy.md`.
+  - Changed: `Makefile` (`build` target), `dependencies.lock.json` (adds `maclib370`, approved by the human 2026-11-26, option a), `docs/research/2026-11-26-licensing.md` (addendum, question 10), the runbook and research indexes, `docs/status.md`, `tasks/usage.jsonl`, this card.
+  - Branch `task/OSE-004-hello-harness`: commit 16565eb (blocked state), then the link commit.
+- Commands run, RC, evidence paths (all under `artifacts/evidence/ose-004/`):
+  - Toolchain: `sh scripts/build.sh toolchain` gave RC 1 three times (missing flex/bison; no git in the image, so no version stamp; libcc370rt not built), then RC 0. Versions `cc370/as370/ld370 1.6.3 (802dde1)`. maclib370 `extract.py --verify`: 1035/1035, RC 0.
+  - libc: `sh scripts/build.sh libc` → RC 0, `libc.a` `d3a422e8…`.
+  - hello: `sh scripts/build.sh hello` → RC 0, `HELLO` `81757408…`, `HELLO.xmit` `0e69e9fa…`. Byte-identical across runs once the timestamps were pinned (research T-7).
+  - **Acceptance 1: `make build` (GNU Make 4.2.1) → RC 0** after a clean rebuild of everything. The same hashes came out twice.
+  - Probes: `PROBE_DIR=… sh scripts/build.sh probes` (research T-4).
+  - `python scripts/check_repo.py`: RC 0. Host unittest: RC 0.
 - Tests not run and why:
-- Decisions / ADRs:
+  - Acceptance 2–4 (deploy and confirmation listing, batch RC/output with a planted RC 4, TSO run) are not run: no guest (OSE-003), no lease, and the deploy transport is undecided (mbt uses mvsMF over HTTP Basic, an alternate access path for OSE-007).
+  - Acceptance 5: compile-time and link-time facts are recorded (T-4, T-5, T-7). The runtime dialect checks need the guest.
+- Decisions / ADRs: human decision 2026-11-26: option (a), maclib370 v1.0.0 `e85286a7` added to the lock. No ADR.
 - Known defects / blockers:
-- Next action:
-- Usage/cost if available:
+  - The macros are TK5-derived; that they work on MVS/CE needs a guest run.
+  - The licence of the macro content is UNRESOLVED (licensing question 10).
+  - The OSE-012 probe `p04` has a raw newline in a string literal; the fix belongs on the OSE-012 branch.
+  - Debian packages are not snapshot-pinned.
+- Next action: standard-tier review of the host part. After OSE-003: choose a deploy transport, write `scripts/deploy.sh`, `jcl/hello/*` and `tests/guest/hello/*`, then run acceptance 2–4 under a lease.
+- Usage/cost if available: not metered.
 ## Independent review and gate result
+
+### Independent review — 2026-11-26
+
+Reviewer: Codex, standard tier, independent of author. Reviewed 419fa79 against 5970f87 in isolated review/OSE-004-r1. Result: **changes requested**.
+
+- **P2 / R04-1 — Host build fails from a Git worktree bind-mounted into Docker.** `scripts/build.sh:71` runs `git config --global --add safe.directory /tmp/cc370` while the container's current directory is `/ose`. A worktree has a `.git` file pointing to its host-side Git metadata; that path does not exist inside this bind mount. This Git invocation tries to resolve the repository and fails before the source is copied or compilation starts. Reproduced on the requested review branch with `& 'C:/Program Files/Git/bin/sh.exe' scripts/build.sh all`: RC 1, `fatal: not a git repository: /ose/C:/Users/49170/projects/ose/.git/worktrees/OSE-004-r1`, then `build.sh: toolchain build failed`. Docker access was approved, and the source caches were isolated copies at the correct pins. Run the global Git configuration from a directory outside the worktree (for example `git -C /tmp config --global ...`), or otherwise avoid resolving the host worktree metadata, and add a worktree smoke check. This blocks the normal host command in this valid checkout layout; it is independent of the compiler and linker.
+- Validation: `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 tests passed. These structural tests do not exercise Docker worktree support.
+- To separate R04-1 from compiler correctness, exported unchanged 419fa79 with `git archive --format=zip` into this worktree's ignored `artifacts/standalone/`, copied the three pinned source caches there, and ran the same `sh scripts/build.sh all` in the export. Results are recorded below on completion. This alternative verification does not close R04-1.
+- No deploy, listing, guest batch/TSO execution or guest mutation was performed. Acceptance 2-4 and TK5-macro compatibility remain pending OSE-003 and a lease. The review does not certify M0 hello execution or the runtime ABI.
+
+Exported-tree build result: `& 'C:/Program Files/Git/bin/sh.exe' scripts/build.sh all` -> **RC 0**, using the pinned Debian image and copied cc370/libc370/maclib370 caches. Fresh build produced cc370/as370/ld370 1.6.3 (802dde1); macro verification 1035/1035. SHA-256 of libc.a, hello.o, HELLO and HELLO.xmit independently match all four expected full hashes in the runbook (Python hashlib assertions, RC 0). Logs, version strings, file370 decodes and hash files are in `artifacts/review/OSE-004-r1/artifacts/standalone/artifacts/evidence/ose-004/` relative to the main workspace. This confirms the compilation/linking claims in a standalone export, while the normal worktree command still fails R04-1. The guest-dependent tests remain not-run. Next action: fix R04-1 and rerun the normal worktree build; retain the guest gate separately.
+
+### Author rework for R04-1 (2026-11-26)
+- **Accepted and reproduced.** A fresh detached worktree (`artifacts/wt-ose004`) has `.git` = `gitdir: C:/Users/…/.git/worktrees/wt-ose004`. In the container, `git config --global --add safe.directory /tmp/cc370` with cwd `/ose` → `fatal: not a git repository: /ose/C:/Users/…/worktrees/wt-ose004`, RC 128. The same command run from `/` → RC 0.
+- **Fix:** `scripts/build.sh` now runs that one command as `(cd / && git config --global …)`. No other git call inside the container resolves `/ose`: cc370's `mkversion.sh` and libc370's `mklibc.py` use `git -C` on their copied clones under `/tmp`, and maclib370's `extract.py --verify` does not call git.
+- **Worktree smoke check:** `sh scripts/build.sh all` run inside the fresh worktree → **RC 0** (about 4 min, with its own pinned clones). It reproduced every recorded hash: `libc.a` `d3a422e8…`, `hello.s` `866cd302…`, `hello.o` `1a1001c4…`, `HELLO` `81757408…`, `HELLO.xmit` `0e69e9fa…`. The main-tree `sh scripts/build.sh hello` gives the same hashes. The worktree was removed afterwards. The check is now a repeatable step in `docs/runbooks/hello-compile-deploy.md`.
+- `python scripts/check_repo.py`: RC 0. Host unittest: RC 0.
+
+### Independent re-review — 2026-11-26
+
+Reviewer: Codex, high tier (escalated re-review after previous changes request), independent of author. Reviewed `0d13ac2` against `59d3b63` on `review/OSE-004-r2`, using the existing worktree at `artifacts/review/OSE-004-r1`. **Host portion accepted; R04-1 closed. No new findings.** The complete task remains REVIEW because guest acceptance 2-4 are still open.
+
+- Confirmed the worktree root `.git` is a file referencing host-side metadata. The fix runs global Git configuration from `/`, avoiding discovery of `/ose/.git`. The runbook now gives a reproducible worktree smoke command.
+- Independently ran `& 'C:/Program Files/Git/bin/sh.exe' scripts/build.sh all` in this worktree with the isolated, pinned source caches and approved Docker access: **RC 0**. This is the exact recipe underlying `make build`; no exported-tree workaround or source edits were used. CC/370, as370 and ld370 report 1.6.3 (802dde1); macro verification passed 1035/1035. Compiler/runtime, libc, hello object, load module and XMIT all built successfully.
+- Independently recomputed SHA-256 with Python hashlib: all five expected hashes match, including libc.a d3a422e8..., hello.s 866cd302..., hello.o 1a1001c4..., HELLO 81757408... and HELLO.xmit 0e69e9fa.... Full values are in the existing T-7 table and output files. Evidence: `artifacts/review/OSE-004-r1/artifacts/evidence/ose-004/` relative to the main workspace (build logs, macro check, versions, hashes and file370 decodes). Hash assertions returned RC 0.
+- `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 tests passed; `git diff --check` -> RC 0 before recording this review.
+- Deploy, guest listing, planted batch RC/output, TSO invocation and TK5 macro/runtime compatibility remain not-run, pending OSE-003, a guest lease and deploy-transport decision. No guest mutation, dependency change, merge or release. Next action: human integration of the accepted host work; complete acceptance 2-4 when the guest is ready.

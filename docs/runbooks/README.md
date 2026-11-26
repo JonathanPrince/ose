@@ -7,4 +7,4 @@ Procedures a person can follow without AI help (spec §8): build, IPL, shutdown,
 | build-host.md | OSE-003 | not yet |
 | sysgen-and-ipl.md | OSE-003 | not yet |
 | guest-lease-snapshot-restore.md | OSE-009 | not yet |
-| hello-compile-deploy.md | OSE-004 | not yet |
+| [hello-compile-deploy.md](hello-compile-deploy.md) | OSE-004 | 2026-11-26, partial (compile only) |

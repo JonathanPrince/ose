@@ -12,3 +12,4 @@ Do not commit bulk copies of IBM manuals or upstream source. Cite a document num
 | [2026-11-26-ufsd-audit.md](2026-11-26-ufsd-audit.md) | OSE-005 | UFSD v1.5.2: request path, identity, permissions, sessions, storage, gap list |
 | [2026-11-26-libc370-inventory.md](2026-11-26-libc370-inventory.md) | OSE-012 | libc370 POSIX inventory (8 of 61 present), errno, nine C dialect probes (compiled with cc370 1.6.3) |
 | [2026-11-26-tso-terminal-audit.md](2026-11-26-tso-terminal-audit.md) | OSE-011 | TSO terminal macros (SVC 93/94/96), libc370 and BREXX terminal I/O, name-collision search |
+| [2026-11-26-toolchain.md](2026-11-26-toolchain.md) | OSE-004 | cc370 build in the pinned container, reproducible hello load module, C dialect probes, maclib370 dependency, mbt deploy transport |
