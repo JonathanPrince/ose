@@ -150,11 +150,10 @@
     },
     {
       "name": "getenv",
-      "header": "include/mvs/env.h",
+      "header": "include/stdlib.h",
       "prototype": [
-        "include/mvs/env.h:19@fcde4e88",
-        "include/mvs/env.h:32@fcde4e88",
-        "include/stdlib.h:97@fcde4e88"
+        "include/stdlib.h:97@fcde4e88",
+        "include/mvs/env.h:19@fcde4e88"
       ],
       "status": "implemented",
       "source": "src/mvs/env/getenv.c:10@fcde4e88",
@@ -163,9 +162,8 @@
     },
     {
       "name": "setenv",
-      "header": "include/mvs/env.h",
+      "header": "include/stdlib.h",
       "prototype": [
-        "include/mvs/env.h:32@fcde4e88",
         "include/stdlib.h:98@fcde4e88"
       ],
       "status": "implemented",
@@ -175,9 +173,8 @@
     },
     {
       "name": "unsetenv",
-      "header": "include/mvs/env.h",
+      "header": "include/stdlib.h",
       "prototype": [
-        "include/mvs/env.h:33@fcde4e88",
         "include/stdlib.h:100@fcde4e88"
       ],
       "status": "implemented",

@@ -12,7 +12,7 @@ Machine-readable result: [`data/libc370-functions.json`](data/libc370-functions.
 
 | Status | Functions |
 |---|---|
-| implemented | `rename` (stdio.h:145, src/stdio/rename.c:48), `getenv`, `setenv`, `unsetenv` (mvs/env.h:19/32/33), `time`, `sleep`, `select` (sys/select.h:42, the dyn75 socket layer), `signal` (C89 handler table only, src/signal/signal.c:17) |
+| implemented | `rename` (stdio.h:145, src/stdio/rename.c:48), `getenv`, `setenv`, `unsetenv` (stdlib.h:97/98/100; `getenv` also in mvs/env.h:19), `time`, `sleep`, `select` (sys/select.h:42, the dyn75 socket layer), `signal` (C89 handler table only, src/signal/signal.c:17) |
 | absent | file descriptors: `open close read write lseek creat dup dup2 pipe fdopen fileno isatty ftruncate fsync`; files and dirs: `stat fstat mkdir rmdir unlink opendir readdir closedir getcwd chdir access chmod fchmod chown umask link symlink readlink utime`; processes: `fork vfork exec* posix_spawn spawn wait waitpid kill sigaction`; identity: `getpid getppid getuid geteuid getgid getegid` |
 
 Verification of "absent": every absent name was searched as a whole word over `include/`, `src/` and `sdk/` (`*.h *.c *.asm *.s`). All hits were prose ("open FILEs", "the wait"), local variables (`ISPFSTAT *stat`) or errno macros (`EPIPE`). None was a declaration or definition.
@@ -42,9 +42,35 @@ libc370 2.29.2 (`70e450f5`, newest on 2026-11-26) gives the identical classifica
 - **OSE-007:** `include/mvs/racf.h` offers `racf_set_acee` ("set the ASXBSENV value"), `racf_get_acee` and `racf_login` ("create a new ACEE for user"). Which callers may use these (authorization state, RAKF checks) is a central identity-forgery question.
 - **OSE-005:** UFSD's own notes say libc370 `iefssreq()` refuses unauthorized callers (sysgen-pins P-6).
 
-## Probes
-Eight one-construct probes are in `tests/host/c-probes/` (README there). **All not-run**: cc370 does not exist on this host until OSE-004 provides it. When run, record each command, RC and diagnostic here.
+**Second scanner defect (review round 1, 2026-11-26):** the prototype search matched function names inside comments. `mvs/env.h:32-33` mentions `getenv()`, `setenv()` and `unsetenv()` in a comment, so the first version gave `mvs/env.h` as their header. The scanner now blanks `/* */` and `//` comments before matching, and prefers the header POSIX names for each function when that header declares it. After regeneration, exactly three rows changed: `getenv`, `setenv` and `unsetenv` now have header `include/stdlib.h` (l.97, 98, 100). `getenv` keeps its genuine second declaration at `mvs/env.h:19`, and the comment hits are gone. No status changed. Checked by hand: `include/stdlib.h:97` `char *getenv(const char *name);`, `:98` `extern int setenv(…)`, `:100` `extern int unsetenv(…)`.
 
-| Probe | Result |
-|---|---|
-| p01 long long … p08 mixed declarations | not-run (needs the OSE-004 harness) |
+## Probes
+There are nine one-construct probes in `tests/host/c-probes/` (README there).
+- **Review rework, 2026-11-26:**
+  - `p04_variadic_macros.c` had a raw newline inside its string literal where `\n` was meant. It failed for that reason, not for lack of compiler support. Fixed.
+  - Added **p00_c89_baseline.c**: prototypes, enum, struct with bit-field, union, typedef, static and extern, `const` and `volatile`, `<stdarg.h>` varargs, function pointers, `switch`/`goto`, string escapes. It is compiled with `-std=c89 -pedantic-errors`.
+
+**Run (observed, 2026-11-26).**
+- Toolchain: `cc370 1.6.3 (802dde1), based on GCC 3.4.6` with the libc370 2.25.1 sysroot. It was built from the pinned sources by the OSE-004 harness (`scripts/build.sh` on `task/OSE-004-hello-harness`, commit 419fa79).
+- Container: `debian@sha256:e67eeead…`, uid 1000.
+- Command: `cc370 <opts> -c -o <probe>.o tests/host/c-probes/<probe>.c`, so each probe is compiled **and assembled**.
+- Evidence: `artifacts/evidence/ose-012/probes/` (`summary.txt`, `*.diag`), git-ignored.
+
+| Probe | Options | RC | Diagnostics |
+|---|---|---|---|
+| p00 C89 baseline | `-O1` | 0 | none |
+| p00 C89 baseline | `-O1 -std=c89 -pedantic-errors` | 0 | none |
+| p01 `long long` | `-O1` | 0 | none |
+| p02 `//` comments | `-O1` | 0 | none (the default mode is GNU89, which accepts `//`) |
+| p03 designated initializers | `-O1` | 0 | none |
+| p04 `__VA_ARGS__` (corrected) | `-O1` | 0 | none |
+| p05 `static inline` | `-O1` | 0 | none |
+| p06 `<stdint.h>` exact widths, `sizeof(void *) == 4` | `-O1` | 0 | none (compile-time asserts hold) |
+| p07 struct layout (size 12, offsets 2 and 4) and `packed` (size 5) | `-O1` | 0 | none (compile-time asserts hold) |
+| p08 mixed declarations, `for (int i…)` | `-O1` | **1** | `'for' loop initial declaration used outside C99 mode` |
+| p08 | `-O1 -std=c99` | 0 | none |
+
+Conclusions:
+- C89 is fully supported, and the spec §3.2 constructs (fixed-width types and explicit packing) are available. **The escalation trigger to OSE-010 does not fire.**
+- OSE code that uses C99 declarations needs `-std=c99` or `-std=gnu99`.
+- These are compile-time results only. Runtime behaviour (for example `long long` division and packed-member access) needs a guest run (OSE-004 guest part).

@@ -18,7 +18,7 @@ Seeded by OSE-012 from libc370 2.25.1 (`fcde4e88`). Per-function source location
 | Function | Header | OSE status | Upstream libc370 status | Test IDs | Notes |
 |---|---|---|---|---|---|
 | rename | stdio.h | absent | implemented | — | ISO C |
-| getenv, setenv, unsetenv | mvs/env.h (not stdlib.h) | absent | implemented | — | non-standard header location |
+| getenv, setenv, unsetenv | stdlib.h | absent | implemented | — | `getenv` is also declared in mvs/env.h:19 (corrected after review round 1) |
 | time | time.h | absent | implemented | — | ISO C |
 | sleep, usleep | unistd.h | absent | implemented | — | timed ECB / STIMER |
 | select | sys/select.h | absent | implemented (sockets) | — | dyn75 socket layer, not general fds |

@@ -1,5 +1,5 @@
 # OSE-012 — Target C subset and LIBC/370 POSIX inventory
-Status: IMPLEMENTED (inventory done; probes written but not-run until OSE-004; awaiting independent standard-tier review)
+Status: IMPLEMENTED (review round 1: changes requested 2026-11-26; rework done, probes run, awaiting re-review)
 Milestone: M0
 Dependencies: OSE-002; the compile probes run with the OSE-004 harness
 Owner: coordinator session (2026-11-26)
@@ -47,8 +47,8 @@ The probes show a construct needed by spec §3.2 (fixed-width types, explicit pa
 - Acceptance status:
   1. JSON parses; every entry has `name`, `header`, `status`, and `source` as `path:line@sha` or null for absent. **Reviewer to re-derive 10 random entries.**
   2. pass: covers every function the card lists, plus 20 related ones (61 in total).
-  3. **not met yet:** the probes are written but **not-run** (no cc370 on this host). They run with the OSE-004 harness, and their results are appended to the research note.
-- Tests not run and why: compile probes p01–p08 (toolchain absent). No guest work, by design.
+  3. **met after rework:** nine probes compiled and assembled with the pinned cc370 1.6.3 (OSE-004 harness, branch `task/OSE-004-hello-harness` 419fa79). Commands, RCs and diagnostics are in the research note §Probes, with evidence in `artifacts/evidence/ose-012/probes/`. All are `observed`.
+- Tests not run and why: runtime behaviour of the probed constructs, which needs a guest (OSE-004 guest part). No guest work in this card, by design.
 - Decisions / ADRs: none. The research note L-4 lists hypotheses for OSE-010: OSE must build the POSIX layer itself, probably over libufs.
 - Known defects / blockers:
   - Acceptance 3 depends on OSE-004.
@@ -56,3 +56,13 @@ The probes show a construct needed by spec §3.2 (fixed-width types, explicit pa
 - Next action: independent standard-tier review of 1–2. Run the probes once OSE-004's toolchain exists (either task may do it, but record it here).
 - Usage/cost: not available to the agent.
 ## Independent review and gate result
+
+### Review round 1 (2026-11-26, relayed by the human): changes requested
+- **P2, probes:** accepted.
+  - `p04_variadic_macros.c` had a raw newline inside its string literal. Fixed.
+  - The C89 baseline probe was missing. Added `p00_c89_baseline.c`.
+  - All nine probes were then run with the pinned toolchain. p00 gives RC 0, also with `-std=c89 -pedantic-errors`. p01–p07 give RC 0. p08 gives RC 1 in the default C89 mode and RC 0 with `-std=c99`. The OSE-010 escalation trigger does not fire.
+- **P2, environment-function headers:** accepted. The scanner matched names inside comments (`mvs/env.h:32-33`).
+  - Fix: strip comments before matching, and prefer the POSIX header. Regenerated the JSON: exactly `getenv`, `setenv` and `unsetenv` changed, now `include/stdlib.h:97/98/100`, with `getenv` also at `mvs/env.h:19`. No status changed.
+  - Also corrected the research note's L-1 table and the compatibility table's Header cell. The card's allowed scope is the upstream column, so I note that the Header cell was edited too, to fix the same defect.
+- The probe `README.md` result column was updated as well.
