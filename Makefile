@@ -2,6 +2,7 @@
 # M0: only `check` and `test-host` are implemented; others name their owning task.
 PYTHON ?= python3
 
+# build: OSE-004; exits 3 while maclib370 is unapproved (scripts/build.sh).
 .PHONY: check test-host doctor fetch build sysgen deploy test-guest test-security package restore
 
 check:
@@ -16,7 +17,8 @@ endef
 
 doctor:        ; $(call notyet,OSE-003)
 fetch:         ; $(call notyet,OSE-002/OSE-003)
-build:         ; $(call notyet,OSE-004)
+build:
+	sh scripts/build.sh all
 sysgen:        ; $(call notyet,OSE-003)
 deploy:        ; $(call notyet,OSE-004)
 test-guest:    ; $(call notyet,OSE-006/OSE-009)
