@@ -68,7 +68,9 @@ toolchain() {
     drun '
         e=/ose/artifacts/evidence/ose-004
         dpkg-query -W -f="\${Package}=\${Version}\n" gcc libc6-dev make python3 flex bison git > $e/apt-versions.txt
-        git config --global --add safe.directory /tmp/cc370
+        # From /, not /ose: in a Git worktree /ose/.git names a host path the
+        # container cannot resolve, and git dies looking for a repository.
+        (cd / && git config --global --add safe.directory /tmp/cc370)
         rm -rf /tmp/cc370 && cp -a artifacts/cache/src/cc370 /tmp/cc370 && cd /tmp/cc370
         make -j"$(nproc)" tools compiler runtime > $e/cc370-build.log 2>&1
         make PREFIX=/ose/artifacts/toolchain install-tools install-compiler install-macros install-runtime >> $e/cc370-build.log 2>&1

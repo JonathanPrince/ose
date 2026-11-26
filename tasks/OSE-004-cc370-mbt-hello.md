@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: REVIEW (independent host review: changes requested; guest acceptance 2-4 remain open)
+Status: REVIEW (R04-1 fixed by the author 2026-11-26, awaiting check; guest acceptance 2-4 remain open)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner: author model (standard tier)
@@ -67,3 +67,9 @@ Reviewer: Codex, standard tier, independent of author. Reviewed 419fa79 against 
 - No deploy, listing, guest batch/TSO execution or guest mutation was performed. Acceptance 2-4 and TK5-macro compatibility remain pending OSE-003 and a lease. The review does not certify M0 hello execution or the runtime ABI.
 
 Exported-tree build result: `& 'C:/Program Files/Git/bin/sh.exe' scripts/build.sh all` -> **RC 0**, using the pinned Debian image and copied cc370/libc370/maclib370 caches. Fresh build produced cc370/as370/ld370 1.6.3 (802dde1); macro verification 1035/1035. SHA-256 of libc.a, hello.o, HELLO and HELLO.xmit independently match all four expected full hashes in the runbook (Python hashlib assertions, RC 0). Logs, version strings, file370 decodes and hash files are in `artifacts/review/OSE-004-r1/artifacts/standalone/artifacts/evidence/ose-004/` relative to the main workspace. This confirms the compilation/linking claims in a standalone export, while the normal worktree command still fails R04-1. The guest-dependent tests remain not-run. Next action: fix R04-1 and rerun the normal worktree build; retain the guest gate separately.
+
+### Author rework for R04-1 (2026-11-26)
+- **Accepted and reproduced.** A fresh detached worktree (`artifacts/wt-ose004`) has `.git` = `gitdir: C:/Users/…/.git/worktrees/wt-ose004`. In the container, `git config --global --add safe.directory /tmp/cc370` with cwd `/ose` → `fatal: not a git repository: /ose/C:/Users/…/worktrees/wt-ose004`, RC 128. The same command run from `/` → RC 0.
+- **Fix:** `scripts/build.sh` now runs that one command as `(cd / && git config --global …)`. No other git call inside the container resolves `/ose`: cc370's `mkversion.sh` and libc370's `mklibc.py` use `git -C` on their copied clones under `/tmp`, and maclib370's `extract.py --verify` does not call git.
+- **Worktree smoke check:** `sh scripts/build.sh all` run inside the fresh worktree → **RC 0** (about 4 min, with its own pinned clones). It reproduced every recorded hash: `libc.a` `d3a422e8…`, `hello.s` `866cd302…`, `hello.o` `1a1001c4…`, `HELLO` `81757408…`, `HELLO.xmit` `0e69e9fa…`. The main-tree `sh scripts/build.sh hello` gives the same hashes. The worktree was removed afterwards. The check is now a repeatable step in `docs/runbooks/hello-compile-deploy.md`.
+- `python scripts/check_repo.py`: RC 0. Host unittest: RC 0.

@@ -28,6 +28,16 @@ Expected hashes at the pins:
 
 The build pins the assembly and link timestamps (`ASMDATE`, `ASMTIME`, `LDDATE`, `LDTIME` in `scripts/build.sh`), so these hashes repeat. If one differs, record the new value and find the cause before going on. The Debian packages are not snapshot-pinned, but they only build the host tools.
 
+**Worktree smoke check** (review R04-1; run it after any change to `scripts/build.sh`). Run the build from a fresh Git worktree, whose `.git` is a file pointing at host-side metadata that the container cannot see:
+
+```sh
+git worktree add --detach artifacts/wt-smoke HEAD
+(cd artifacts/wt-smoke && sh scripts/build.sh all)    # expect RC 0 and the hashes above
+git worktree remove --force artifacts/wt-smoke
+```
+
+Last run: 2026-11-26, RC 0, with all five hashes as above. It takes about 4 minutes, because the worktree clones its own pinned sources.
+
 `scripts/build.sh` pins the image by digest and every source by full commit SHA. It refuses a clone that is not at its pin or that has local changes.
 
 ## Not yet possible
