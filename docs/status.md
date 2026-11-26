@@ -36,7 +36,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
 | OSE-011 | TSO terminal and name audit | READY (source part) | economy → standard | — |
 | OSE-012 | C subset and libc POSIX inventory | READY | economy, standard review | — |
-| OSE-013 | Enforce MVP and RAKF pins | READY | standard | — |
+| OSE-013 | Enforce MVP and RAKF pins | IMPLEMENTED (host-verified; needs review) | standard | — |
 
 ## Decisions needed from the human
 Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement in OSE-013), and OSE-011, 012 and 013 were approved.

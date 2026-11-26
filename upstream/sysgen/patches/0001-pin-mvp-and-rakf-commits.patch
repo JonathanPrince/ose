@@ -1,0 +1,133 @@
+OSE patch P-01 for MVS-sysgen/sysgen@4746195d33d9810bb9dfb0e8a3064a33efbb0559
+
+Pin MVP and RAKF to commits: mvslovers.conf gains [mvp] commit and [rakf] commit;
+git_clone(commit=...) checks the commit out and refuses a clone whose HEAD differs;
+update_manifest leaves commit-pinned entries alone. Owner: OSE-013.
+
+diff --git a/mvslovers.conf b/mvslovers.conf
+index ad86aff..59847e4 100644
+--- a/mvslovers.conf
++++ b/mvslovers.conf
+@@ -61,6 +61,11 @@ asset = mvsmf-1.4.1-dist.tar.gz
+ # computed: not listed in the release's SHA256SUMS
+ sha256 = 4bebd2e2ad92286181981d62034981d01e1606e3794f63fdc79fb5560afa47c2
+ 
++[mvp]
++# git clone, no releases: commit pins are verified and moved by hand only
++repo = MVS-sysgen/MVP
++commit = 4c004a599f6a49442fade63cdb3cc3a9e0fdf58a
++
+ [sdsf]
+ repo = mvslovers/sdsf
+ version = 1.2.0
+@@ -70,6 +75,7 @@ sha256 = b5cfd729d245c3ad779a08b72d55d5ddace35a3650dda1f308c7d1f4e2340b42
+ [rakf]
+ repo = mvslovers/RAKF
+ ref = v2.1.0
++commit = 941b07dc19adb7a1a153caaeba96b659ff2ad3e0
+ 
+ # Host tool for the UFS disk images of step 12a (not installed on MVS).
+ # sysgen downloads ufsd-utils-<os>-<arch>.tar.gz of release v<version>;
+diff --git a/mvslovers.py b/mvslovers.py
+index 671c0b5..cedcc90 100644
+--- a/mvslovers.py
++++ b/mvslovers.py
+@@ -1687,6 +1687,9 @@ def update_manifest(conf=DEFAULT_CONF, products=None, opener=urllib.request.urlo
+     new = {}
+     for p in products:
+         pin = manifest[p]
++        if 'commit' in pin:
++            log('{}: pinned to commit {}; move it by hand'.format(p, pin['commit'][:12]))
++            continue
+         rel = _api('https://api.github.com/repos/{}/releases/latest'.format(pin['repo']), opener)
+         tag = rel['tag_name']
+         if 'ref' in pin:
+@@ -1768,7 +1771,7 @@ def update_manifest(conf=DEFAULT_CONF, products=None, opener=urllib.request.urlo
+     if changed:
+         _rewrite(conf, {p: (new[p][0], new[p][3]) for p, _, _ in changed})
+     width = max(len(p) for p in products)
+-    for p in products:
++    for p in new:
+         _, old, nv, _ = new[p]
+         log('{:<{w}}  {} -> {}{}'.format(p, old, nv, '' if old != nv else '  (current)', w=width))
+     return changed
+diff --git a/sysgen.py b/sysgen.py
+index 7ac07dc..3a28779 100755
+--- a/sysgen.py
++++ b/sysgen.py
+@@ -2110,7 +2110,7 @@ class sysgen:
+         # moves it. RAKF 2.x ships no prebuilt tools: generate_release.py
+         # emits one EBCDIC job (RAKFINST) that RECEIVEs/APPLYs/ACCEPTs TRKF210
+         # and assembles everything on the target.
+-        self.git_clone("https://github.com/{}".format(rakf['repo']), ref=rakf['ref'])
++        self.git_clone("https://github.com/{}".format(rakf['repo']), ref=rakf['ref'], commit=rakf.get('commit'))
+ 
+         # users.conf -> RAKF 2.1.0 users.txt (record type in col 9, Special
+         # flag in col 30 for ADMINs, started task ids FTPD/HTTPD in group
+@@ -2731,7 +2731,10 @@ class sysgen:
+         self.print("Step 9. Installing MVS/CE Package Manager MVP", color="CYAN")
+         self.restore_dasd("32_RAKF")
+         self.custjobs_ipl("Installing MVP", clpa=True)
+-        self.git_clone("https://github.com/MVS-sysgen/MVP", out_folder="MVSCE")
++        import mvslovers
++        mvp = mvslovers.load_manifest().get('mvp', {})
++        self.git_clone("https://github.com/{}".format(mvp.get('repo', 'MVS-sysgen/MVP')), out_folder="MVSCE",
++                       commit=mvp.get('commit'))
+         
+         rakf_admin_user,rakf_admin_password = self.get_rakf_admin()
+ 
+@@ -3207,12 +3210,14 @@ class sysgen:
+             subprocess.check_call(args, stdout=subprocess.DEVNULL)
+             VOLUME = chr(ord(VOLUME[0])+1)
+ 
+-    def git_clone(self, repo, out_folder="temp", ref=None):
++    def git_clone(self, repo, out_folder="temp", ref=None, commit=None):
+         '''Clone repo into out_folder (or refresh an existing clone).
+ 
+            ref: a tag/branch to check out (e.g. the RAKF pin in
+            mvslovers.conf). With a ref an existing clone is fetched and the
+            ref checked out (detached), instead of fast-forwarding HEAD.
++           commit: a full SHA (mvslovers.conf 'commit'); it is checked out
++           and HEAD must equal it afterwards, or the clone is refused.
+         '''
+         try:
+             git_query_path = subprocess.check_output(["which", "git"]).strip()
+@@ -3230,7 +3235,8 @@ class sysgen:
+         if os.path.exists(target):
+             if not os.path.isdir(os.path.join(target, '.git')):
+                 raise Exception("{} exists but is not a git clone; remove it and re-run".format(target))
+-            if ref:
++            if ref or commit:
++                ref = commit or ref
+                 logging.debug("git clone target {} exists, checking out {}".format(target, ref))
+                 # The pin names the repo too: follow it if the clone is of another one.
+                 subprocess.run([git_query_path, '-C', target, 'remote', 'set-url', 'origin', repo],
+@@ -3243,7 +3249,7 @@ class sysgen:
+                 if result.returncode != 0:
+                     raise Exception("checkout of {} in {} failed: {}\nRemove it and re-run: rm -rf {}".format(
+                         ref, target, result.stderr.decode().strip(), target))
+-                return
++                return self.git_verify_commit(git_query_path, target, commit)
+             logging.debug("git clone target {} exists, pulling".format(target))
+             result = subprocess.run([git_query_path, '-C', target, 'pull', '--ff-only'],
+                                     stderr=subprocess.PIPE, stdout=subprocess.DEVNULL)
+@@ -3267,6 +3273,19 @@ class sysgen:
+         result = subprocess.run(args, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL)
+         if result.returncode != 0:
+             raise Exception("git clone of {} failed: {}".format(repo, result.stderr.decode().strip()))
++        if commit:
++            subprocess.run([git_query_path, '-C', target, 'checkout', '--force', '--detach', commit],
++                           stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
++            self.git_verify_commit(git_query_path, target, commit)
++
++    def git_verify_commit(self, git, target, commit):
++        '''Refuse a clone whose HEAD is not the pinned commit (if one is pinned).'''
++        if not commit:
++            return
++        head = subprocess.run([git, '-C', target, 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL,
++                              stdout=subprocess.PIPE).stdout.decode().strip()
++        if head != commit:
++            raise Exception("{} is at {} but mvslovers.conf pins commit {}".format(target, head or '?', commit))
+ 
+     def github_release_asset(self, repo, asset, dest, tag="latest"):
+         '''Download a named asset from a github release.
