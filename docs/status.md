@@ -27,7 +27,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | VERIFIED (merged to main) | economy, standard review | coordinator |
 | OSE-003 | Build host doctor and sysgen | BACKLOG (ADR-0003 accepted; needs OSE-013) | standard | — |
-| OSE-004 | CC/370 + MBT hello | REVIEW (R04-1 worktree fix done, awaiting check; guest gate pending) | standard | — |
+| OSE-004 | CC/370 + MBT hello | REVIEW (host accepted; guest acceptance 2-4 pending) | standard | — |
 | OSE-005 | UFSD interface audit | READY | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG | high | — |
@@ -66,3 +66,7 @@ Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement i
 ## Independent review — 2026-11-26
 
 OSE-004: changes requested for container Git discovery in worktrees (R04-1). Exported-tree rebuild succeeds and reproduces all four recorded hashes. Guest deployment/execution acceptance stays open. See task card for commands and evidence.
+
+## OSE-004 independent re-review — 2026-11-26
+
+Host portion accepted at 0d13ac2: R04-1 closed by independent complete worktree build (RC 0), all five artifact hashes match and 11 host tests pass. Task remains REVIEW until guest acceptance 2-4. See the task card for evidence; human owns integration.
