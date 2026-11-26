@@ -1,15 +1,15 @@
 # OSE-012 — Target C subset and LIBC/370 POSIX inventory
-Status: READY (approved 2026-11-26; OSE-002 VERIFIED)
+Status: IMPLEMENTED (inventory done; probes written but not-run until OSE-004; awaiting independent standard-tier review)
 Milestone: M0
 Dependencies: OSE-002; the compile probes run with the OSE-004 harness
-Owner:
+Owner: coordinator session (2026-11-26)
 Risk: low
 Model tier: economy (inventory extraction); standard for review and the dialect probes
 Reviewer tier: standard
 Budget: local-only
 Branch: task/OSE-012-libc-inventory
 Guest resources: none for the inventory; the probes reuse an OSE-004 lease
-Baseline commit:
+Baseline commit: 5970f87
 Origin: added by the OSE-001 coordinator. It covers the spec §10 M0 question "target C subset" and the spec §2 direction for LIBC/370: "Audit existing POSIX functions before extending". BOOTSTRAP.md had no card for either.
 
 ## Goal and non-goals
@@ -31,11 +31,28 @@ libc370 and cc370 at their pins; their manuals on mvslovers.readthedocs.io; spec
 The probes show a construct needed by spec §3.2 (fixed-width types, explicit packing) is unavailable → escalate to OSE-010.
 
 ## Handoff
-- Changed files / commits:
-- Commands run, RC, evidence paths:
-- Tests not run and why:
-- Decisions / ADRs:
+- Changed files (branch `task/OSE-012-libc-inventory`, base `5970f87`):
+  - `docs/research/2026-11-26-libc370-inventory.md` (new)
+  - `docs/research/data/libc370-functions.json` (new: 61 functions, errno summary, 2.29.2 comparison)
+  - `tests/host/c-probes/` (README plus 8 probes p01–p08)
+  - `docs/compatibility.md` (POSIX table, upstream column)
+  - `docs/research/README.md` (index), this card, `docs/status.md`, `tasks/usage.jsonl`
+- Commands run, RC, evidence (2026-11-26, Windows 11, Git Bash, Python 3.14.4):
+  - `git init` and `git config core.autocrlf false`, then `git fetch --depth 1 https://github.com/mvslovers/libc370 fcde4e88…` and checkout into `artifacts/cache/libc370`: RC 0, HEAD = fcde4e88. Same for `70e450f5` (2.29.2) into `artifacts/cache/libc370-head`.
+  - The inventory script (prototype and definition scan) was run twice: the first pass had a regex defect (see the research note L-1), the second is the recorded result. `signal` was corrected by hand.
+  - Whole-word cross-check of all 53 "absent" names over `include/ src/ sdk/`: no declaration or definition found.
+  - `grep` of `include/errno.h`: 140 defines; ENOSYS = 38.
+  - The same scan on 2.29.2 gives an identical classification, and `unistd.h` is unchanged.
+  - `python -I scripts/check_repo.py` and `python -I -m unittest discover -s tests/host`: see the usage log entry for this attempt.
+- Acceptance status:
+  1. JSON parses; every entry has `name`, `header`, `status`, and `source` as `path:line@sha` or null for absent. **Reviewer to re-derive 10 random entries.**
+  2. pass: covers every function the card lists, plus 20 related ones (61 in total).
+  3. **not met yet:** the probes are written but **not-run** (no cc370 on this host). They run with the OSE-004 harness, and their results are appended to the research note.
+- Tests not run and why: compile probes p01–p08 (toolchain absent). No guest work, by design.
+- Decisions / ADRs: none. The research note L-4 lists hypotheses for OSE-010: OSE must build the POSIX layer itself, probably over libufs.
 - Known defects / blockers:
-- Next action:
-- Usage/cost if available:
+  - Acceptance 3 depends on OSE-004.
+  - Static scan only: macros generated at build time or definitions in assembler outside `src/` would be missed. The cross-check found no sign of either.
+- Next action: independent standard-tier review of 1–2. Run the probes once OSE-004's toolchain exists (either task may do it, but record it here).
+- Usage/cost: not available to the agent.
 ## Independent review and gate result

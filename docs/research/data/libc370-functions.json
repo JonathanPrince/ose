@@ -1,0 +1,597 @@
+{
+  "libc370_commit": "fcde4e88b3bebca001355aa3c1dd3c3a633f04af",
+  "method": "static scan of include/**/*.h (prototypes) and src/**/*.c (definitions, including the return-type-on-its-own-line style); every 'absent' cross-checked by whole-word search of include/, src/, sdk/ (hits were prose, local variables or errno names only). Not compiled.",
+  "functions": [
+    {
+      "name": "open",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "close",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "read",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "write",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "lseek",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "stat",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "fstat",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "mkdir",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "rmdir",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "unlink",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "rename",
+      "header": "include/stdio.h",
+      "prototype": [
+        "include/stdio.h:145@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/stdio/rename.c:48@fcde4e88",
+      "note": "body 39 code lines",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "opendir",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "readdir",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "closedir",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "getcwd",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "chdir",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "getenv",
+      "header": "include/mvs/env.h",
+      "prototype": [
+        "include/mvs/env.h:19@fcde4e88",
+        "include/mvs/env.h:32@fcde4e88",
+        "include/stdlib.h:97@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/mvs/env/getenv.c:10@fcde4e88",
+      "note": "body 11 code lines",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "setenv",
+      "header": "include/mvs/env.h",
+      "prototype": [
+        "include/mvs/env.h:32@fcde4e88",
+        "include/stdlib.h:98@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/stdlib/setenv.c:21@fcde4e88",
+      "note": "body 53 code lines",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "unsetenv",
+      "header": "include/mvs/env.h",
+      "prototype": [
+        "include/mvs/env.h:33@fcde4e88",
+        "include/stdlib.h:100@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/stdlib/unsetenv.c:12@fcde4e88",
+      "note": "body 27 code lines",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "pipe",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "dup",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "dup2",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "execl",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "execle",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "execlp",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "execv",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "execve",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "execvp",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "posix_spawn",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "spawn",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "fork",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "vfork",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "wait",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "waitpid",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "getpid",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "getppid",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "getuid",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "geteuid",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "getgid",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "getegid",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "time",
+      "header": "include/time.h",
+      "prototype": [
+        "include/time.h:48@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/time/time.c:28@fcde4e88",
+      "note": "body 8 code lines",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "fdopen",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "fileno",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "isatty",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "access",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "chmod",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "fchmod",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "chown",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "umask",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "ftruncate",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "fsync",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "kill",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "signal",
+      "header": "include/signal.h",
+      "prototype": [
+        "include/signal.h:37@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/signal/signal.c:17@fcde4e88",
+      "note": "C89 handler table only (stores func for SIGABRT..SIGTERM, returns func). Not found by the scanner because the definition starts with 'void (*signal(' ; corrected by hand. No asynchronous delivery, no sigaction.",
+      "confidence": "observed (static read, corrected manually)"
+    },
+    {
+      "name": "sigaction",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "sleep",
+      "header": "include/unistd.h",
+      "prototype": [
+        "include/unistd.h:11@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/unistd/sleep.c:6@fcde4e88",
+      "note": "body 25 code lines",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "select",
+      "header": "include/sys/select.h",
+      "prototype": [
+        "include/sys/select.h:42@fcde4e88"
+      ],
+      "status": "implemented",
+      "source": "src/net/dyn75/@@75sele.c:25@fcde4e88",
+      "note": "body 4 code lines",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "creat",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "link",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "symlink",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "readlink",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    },
+    {
+      "name": "utime",
+      "header": null,
+      "prototype": [],
+      "status": "absent",
+      "source": null,
+      "note": "no prototype in include/, no definition in src/",
+      "confidence": "observed (static read; not compiled or run)"
+    }
+  ],
+  "errno": {
+    "header": "include/errno.h@fcde4e88",
+    "count_defines": 140,
+    "access": "errno is *(__errno()) (include/errno.h:5-6), a per-caller function, not a global",
+    "selected": {
+      "EPERM": 1,
+      "ENOENT": 2,
+      "EINTR": 4,
+      "EBADF": 9,
+      "ECHILD": 10,
+      "EACCES": 13,
+      "EEXIST": 17,
+      "ENOTDIR": 20,
+      "EAGAIN": 35,
+      "ENOSYS": 38
+    },
+    "note": "Numbering is not Linux's (EAGAIN 35, ENOSYS 38). Do not port code with hard-coded errno numbers."
+  },
+  "compared_with": {
+    "libc370_2.29.2": "70e450f52588ce32469891c5ca3e1ca45fb1ca62",
+    "result": "same classification for every function; include/unistd.h identical"
+  }
+}
