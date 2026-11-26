@@ -34,4 +34,25 @@ upstream/<component>/patches/NNNN-*.patch # minimal, reviewable, offered upstrea
 }
 ```
 
-`scripts/check_repo.py` checks the required keys and the SHA format. While `components` is empty the file is valid; OSE-002 fills it in.
+`scripts/check_repo.py` checks the required keys and the SHA format.
+
+Two optional top-level lists were added in the OSE-002 rework:
+
+```json
+"excluded": [
+  {"name": "ufs370", "source_url": "...", "observed_head": "<sha or null>",
+   "reason": "why it is not a dependency", "evidence": "where that was established",
+   "revisit": "condition for reconsidering"}
+],
+"pending_enforcement": [
+  {"component": "mvp", "issue": "pin recorded but not enforced because ...",
+   "owner": "OSE-013", "blocks": "what cannot be VERIFIED until it is closed"}
+]
+```
+
+An open `pending_enforcement` entry means the pin is **recorded but not yet guaranteed** by the build. Its lifecycle has three stages:
+1. Open: recorded by OSE-002.
+2. `"status": "host-verified"`: OSE-013's enforcement passed its host tests, cited in the entry.
+3. Removed: OSE-003 removes the entry after a real sysgen run shows the pinned SHAs (OSE-003 acceptance test 7).
+
+**Hashing rule:** artifact sha256 values are taken over the upstream bytes, meaning a release download, a raw.githubusercontent download, or `git cat-file blob`. Never hash a working tree on a host with `core.autocrlf=true` (research 2026-11-26-sysgen-pins P-9).

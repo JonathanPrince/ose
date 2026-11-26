@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: BACKLOG (host part becomes READY after OSE-002; guest part needs the OSE-003 image)
+Status: READY (host part; OSE-002 VERIFIED 2026-11-26; guest part needs the OSE-003 image)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner:

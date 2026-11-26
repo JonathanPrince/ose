@@ -12,7 +12,9 @@
       "license_spdx": "UNRESOLVED",
       "license_evidence": "no LICENSE/COPYING at commit; README has no license statement (grep 2026-11-26)",
       "redistribution": "UNRESOLVED",
-      "patches": ["planned: upstream/sysgen/MANIFEST.md P-01 (pin MVP ref)"],
+      "patches": [
+        "planned: upstream/sysgen/MANIFEST.md P-01 (pin MVP ref)"
+      ],
       "pinned_by": "OSE-002 base pin (HEAD of main on 2026-11-26)",
       "verified_date": "2026-11-26",
       "verified_by": "OSE-002 (coordinator session, high tier)",
@@ -49,8 +51,8 @@
       "patches": [],
       "pinned_by": "OSE-002 (sysgen clones MVP unpinned; enforcing this pin needs sysgen patch P-01)",
       "verified_date": "2026-11-26",
-      "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "sysgen git_clone() runs 'git pull --ff-only' on an existing clone without ref (sysgen.py l.3247), so a pre-staged detached checkout fails. A wrapper cannot pin it without P-01."
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "sysgen git_clone() runs 'git pull --ff-only' on an existing clone without ref (sysgen.py l.3247), so a pre-staged detached checkout fails. A wrapper cannot pin it without P-01. The packages that sysgen installs are inventoried as separate mvp-pkg-* entries (review finding 1)."
     },
     {
       "name": "hercules",
@@ -60,14 +62,14 @@
       "version": "4.9.1",
       "tag": "Release_4.9.1",
       "artifacts": [],
-      "license_spdx": "QPL-1.0",
-      "license_evidence": "COPYRIGHT@ee86c4de: 'Hercules may be distributed under the terms of the Q Public License Version 1.0'; LICENSES/ directory not yet read",
-      "redistribution": "permitted",
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "COPYRIGHT@ee86c4de: 'Hercules may be distributed under the terms of the Q Public License Version 1.0'. LICENSES/ at the pin also holds crypto.LICENSE.txt, decnumber.ICU-license.html, herclic.html, softfloat.LICENSE.txt, telnet.LICENSE.txt, none of them read yet.",
+      "redistribution": "UNRESOLVED",
       "patches": [],
       "pinned_by": "ADR-0005 (proposed); sysgen requires >= 4.5 (README l.10)",
       "verified_date": "2026-11-26",
-      "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "Built from source on the host; OSE does not redistribute binaries. The QPL redistribution conditions (patches distributed separately) have not been reviewed in detail."
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "Built from source on the host; OSE does not plan to redistribute binaries. Candidate expression: QPL-1.0 plus the bundled component licenses. Conditions not reviewed (licensing note Q6)."
     },
     {
       "name": "hercules-helper",
@@ -111,18 +113,27 @@
       "version": "3.1.0",
       "tag": "v3.1.0",
       "artifacts": [
-        {"url": "https://github.com/mvslovers/brexx370/releases/download/v3.1.0/brexx370-3.1.0-dist.tar.gz", "sha256": "8a538d246c2a925a6202ebb1a2d21baed959fbb89175bcdbbc275455228c003a"},
-        {"url": "https://github.com/mvslovers/brexx370/releases/download/v3.1.0/ZMG0001.xmit", "sha256": "d3a0ed8f0c18cbfea6b9bf59a27485e1eb837d8b613cc0172a185020bda7bc64"},
-        {"url": "https://github.com/mvslovers/brexx370/releases/download/v3.1.0/ZMG0001.zip", "sha256": "cb6163afa09a5bc153e3070edf419030de3b456be9e1834b551a6865c7715ba7"}
+        {
+          "url": "https://github.com/mvslovers/brexx370/releases/download/v3.1.0/brexx370-3.1.0-dist.tar.gz",
+          "sha256": "8a538d246c2a925a6202ebb1a2d21baed959fbb89175bcdbbc275455228c003a"
+        },
+        {
+          "url": "https://github.com/mvslovers/brexx370/releases/download/v3.1.0/ZMG0001.xmit",
+          "sha256": "d3a0ed8f0c18cbfea6b9bf59a27485e1eb837d8b613cc0172a185020bda7bc64"
+        },
+        {
+          "url": "https://github.com/mvslovers/brexx370/releases/download/v3.1.0/ZMG0001.zip",
+          "sha256": "cb6163afa09a5bc153e3070edf419030de3b456be9e1834b551a6865c7715ba7"
+        }
       ],
-      "license_spdx": "GPL-2.0",
-      "license_evidence": "COPYING@5aabe493 (GNU GPL Version 2, June 1991); '-or-later' not determined",
-      "redistribution": "permitted",
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "COPYING@5aabe493 is the GNU GPL v2 text; README.md l.123-132: 'licensed under the GNU General Public License, version 2 (GPL-2.0)'; bundled fss/, src/rxtso.c, inc/rxtso.h New BSD (Tommy Sprinkle), map/ MIT, regex/ Unlicense. 'only' vs 'or later' not stated in the material read; per-file headers not read.",
+      "redistribution": "UNRESOLVED",
       "patches": [],
       "pinned_by": "sysgen@4746195d mvslovers.conf [brexx370], [zmg0001]",
       "verified_date": "2026-11-26",
-      "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "Annotated tag object ce2e535e; commit shown. Redistribution of binaries carries GPL source obligations."
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "Annotated tag object ce2e535e; commit shown. Candidate expression for the human: GPL-2.0-only AND BSD-3-Clause AND MIT AND Unlicense (unverified)."
     },
     {
       "name": "ufsd",
@@ -132,7 +143,10 @@
       "version": "1.5.2",
       "tag": "v1.5.2",
       "artifacts": [
-        {"url": "https://github.com/mvslovers/ufsd/releases/download/v1.5.2/ufsd-1.5.2-dist.tar.gz", "sha256": "4d3f656a91403e8b356d665e41839f13a20b375599d8c1c71062d073b1da3218"}
+        {
+          "url": "https://github.com/mvslovers/ufsd/releases/download/v1.5.2/ufsd-1.5.2-dist.tar.gz",
+          "sha256": "4d3f656a91403e8b356d665e41839f13a20b375599d8c1c71062d073b1da3218"
+        }
       ],
       "license_spdx": "MIT",
       "license_evidence": "LICENSE@1a63bf52",
@@ -140,8 +154,8 @@
       "patches": [],
       "pinned_by": "sysgen@4746195d mvslovers.conf [ufsd]",
       "verified_date": "2026-11-26",
-      "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "Built with cc370 1.6.3, libc370 2.25.1, mbt 3.0 (mbt.toml@1a63bf52). HEAD f0a5dd98 is newer; OSE-005 audits this tag, not HEAD."
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "Built with cc370 1.6.3, libc370 2.25.1, mbt 3.0 (mbt.toml@1a63bf52). HEAD f0a5dd98 is newer; OSE-005 audits this tag, not HEAD. ufsd README says the on-disk format code was 'originally contributed to The NetBSD Foundation by UCHIYAMA Yasushi'; whether BSD notices must be kept alongside MIT has not been checked (licensing note Q7)."
     },
     {
       "name": "ftpd",
@@ -151,7 +165,10 @@
       "version": "1.3.4",
       "tag": "v1.3.4",
       "artifacts": [
-        {"url": "https://github.com/mvslovers/ftpd/releases/download/v1.3.4/ftpd-1.3.4-dist.tar.gz", "sha256": "0d6811657572b585552f6a2b2572985ff203dd2778ae98561c3618d59a741c85"}
+        {
+          "url": "https://github.com/mvslovers/ftpd/releases/download/v1.3.4/ftpd-1.3.4-dist.tar.gz",
+          "sha256": "0d6811657572b585552f6a2b2572985ff203dd2778ae98561c3618d59a741c85"
+        }
       ],
       "license_spdx": "MIT",
       "license_evidence": "LICENSE@b079ced6",
@@ -170,7 +187,10 @@
       "version": "4.5.1",
       "tag": "v4.5.1",
       "artifacts": [
-        {"url": "https://github.com/mvslovers/httpd/releases/download/v4.5.1/httpd-4.5.1-dist.tar.gz", "sha256": "2fdf222488f1708443de3e154bc2949b6e976db0321a5f79c8590cfa884eabbd"}
+        {
+          "url": "https://github.com/mvslovers/httpd/releases/download/v4.5.1/httpd-4.5.1-dist.tar.gz",
+          "sha256": "2fdf222488f1708443de3e154bc2949b6e976db0321a5f79c8590cfa884eabbd"
+        }
       ],
       "license_spdx": "MIT",
       "license_evidence": "LICENSE@717d8d9d",
@@ -189,7 +209,10 @@
       "version": "1.4.1",
       "tag": "v1.4.1",
       "artifacts": [
-        {"url": "https://github.com/mvslovers/mvsmf/releases/download/v1.4.1/mvsmf-1.4.1-dist.tar.gz", "sha256": "4bebd2e2ad92286181981d62034981d01e1606e3794f63fdc79fb5560afa47c2"}
+        {
+          "url": "https://github.com/mvslovers/mvsmf/releases/download/v1.4.1/mvsmf-1.4.1-dist.tar.gz",
+          "sha256": "4bebd2e2ad92286181981d62034981d01e1606e3794f63fdc79fb5560afa47c2"
+        }
       ],
       "license_spdx": "MIT",
       "license_evidence": "LICENSE@b094629d",
@@ -208,7 +231,10 @@
       "version": "1.2.0",
       "tag": "v1.2.0",
       "artifacts": [
-        {"url": "https://github.com/mvslovers/sdsf/releases/download/v1.2.0/sdsf-1.2.0-dist.tar.gz", "sha256": "b5cfd729d245c3ad779a08b72d55d5ddace35a3650dda1f308c7d1f4e2340b42"}
+        {
+          "url": "https://github.com/mvslovers/sdsf/releases/download/v1.2.0/sdsf-1.2.0-dist.tar.gz",
+          "sha256": "b5cfd729d245c3ad779a08b72d55d5ddace35a3650dda1f308c7d1f4e2340b42"
+        }
       ],
       "license_spdx": "UNRESOLVED",
       "license_evidence": "no LICENSE/COPYING at commit; README has no license statement; dist tarball has no license file",
@@ -227,16 +253,19 @@
       "version": "1.0.1",
       "tag": "v1.0.1",
       "artifacts": [
-        {"url": "https://github.com/mvslovers/ufsd-utils/releases/download/v1.0.1/ufsd-utils-linux-amd64.tar.gz", "sha256": "dba81bbe80f3011f9e05aada7d7efcb67ccb19591da8db7e28443d14e459ac36"}
+        {
+          "url": "https://github.com/mvslovers/ufsd-utils/releases/download/v1.0.1/ufsd-utils-linux-amd64.tar.gz",
+          "sha256": "dba81bbe80f3011f9e05aada7d7efcb67ccb19591da8db7e28443d14e459ac36"
+        }
       ],
-      "license_spdx": "MIT",
+      "license_spdx": "UNRESOLVED",
       "license_evidence": "README.md@78a1c8af 'License: MIT' (l.71-73); no LICENSE file in repo",
       "redistribution": "UNRESOLVED",
       "patches": [],
       "pinned_by": "sysgen@4746195d mvslovers.conf [ufsd-utils] sha256-linux-amd64",
       "verified_date": "2026-11-26",
-      "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "Precompiled Go binary run on the build host. A linux-arm64 asset is also pinned upstream but was not downloaded. MIT is declared without license text, so attribution terms are unclear."
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "Precompiled Go binary run on the build host. A linux-arm64 asset is also pinned upstream but was not downloaded. MIT is declared without license text, so attribution terms are unclear. Rework: README declares MIT but no license text exists at the pin, so per ADR-0004 section 6 the value is UNRESOLVED."
     },
     {
       "name": "cc370",
@@ -246,14 +275,14 @@
       "version": "1.6.3",
       "tag": "v1.6.3",
       "artifacts": [],
-      "license_spdx": "GPL-2.0",
-      "license_evidence": "COPYING@802dde1c (GNU GPL Version 2, June 1991); runtime/libgcc exception status not determined",
-      "redistribution": "permitted",
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "COPYING@802dde1c is the GNU GPL v2 text; source headers (GCC 3.4.6 lineage, historically 'version 2, or (at your option) any later version') not read at the pin; runtime/libgcc exception status not determined",
+      "redistribution": "UNRESOLVED",
       "patches": [],
       "pinned_by": "ADR-0005 (proposed): the toolchain ufsd 1.5.2 was built with (ufsd mbt.toml@1a63bf52)",
       "verified_date": "2026-11-26",
-      "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "Annotated tag object a63d9512. Newest tag on 2026-11-26 is also v1.6.3. Whether compiled OSE output carries GPL obligations (libgcc-like support code) is an open question in the licensing note."
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "Annotated tag object a63d9512. Newest tag on 2026-11-26 is also v1.6.3. Whether compiled OSE output carries GPL obligations (libgcc-like support code) is an open question in the licensing note. Rework: SPDX left UNRESOLVED for the same only/or-later gap as brexx370 (consistency with review finding 2)."
     },
     {
       "name": "libc370",
@@ -288,6 +317,522 @@
       "verified_date": "2026-11-26",
       "verified_by": "OSE-002 (coordinator session, high tier)",
       "notes": "Annotated tag object 60d74845. Newest overall is v3.2.0. Go program (go.mod). Per README, v2+ builds entirely on the host and 'MVS is only touched by make deploy'; the deploy transport is for OSE-004 to establish."
+    },
+    {
+      "name": "mvp-pkg-nje38",
+      "role": "MVP package NJE38 installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/NJE38",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "2.3.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/NJE38",
+          "sha256": "a626a060cf9a4d6241bbe43e9a16d8ade3bcb42527f2982e3cccb4f38b864d02"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "No license text found in the package; desc Homepage https://github.com/moshix/nje38mvs (not read). Maintainer Bob Polmanter.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "sysgen jcl/nje38.jcl l.12 (sysgen.py l.2860); version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 1696693 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-ispf",
+      "role": "MVP package ISPF installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ISPF",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "2.2.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ISPF",
+          "sha256": "7259ce5834733cadc3799a5a92a9948c427dd70dcc6cf8efd48de0eb9f6c6c4d"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Members carry 'COPYRIGHT 2021, WALLY MCLAUGHLIN' (decoded cp037 from the XMI). No grant found.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "sysgen jcl/ispf.jcl l.12 (sysgen.py l.2881); version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type XMI; size 944640 bytes (git blob, no line-ending conversion). Depends: REVIEW."
+    },
+    {
+      "name": "mvp-pkg-isptheme",
+      "role": "MVP package ISPTHEME installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ISPTHEME",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ISPTHEME",
+          "sha256": "1e0a3dade8d39bc8f49a53759539881fbd500d6915812c5cb3d7513bc5ec0151"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "desc Homepage https://github.com/MVS-sysgen/SOFTWARE/tree/main/ISPTHEME (not read); embedded members carry Belmontes copyright notices.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "sysgen jcl/ispf.jcl l.13; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 21830 bytes (git blob, no line-ending conversion). Depends: ISPF DFSPC DALCDS DUCBD CCOMPR FINDSRCH ISPOPT5 ULXL01 WRLDWTCH."
+    },
+    {
+      "name": "mvp-pkg-opnterse",
+      "role": "MVP package OPNTERSE installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/OPNTERSE",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "0.1.2",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/OPNTERSE",
+          "sha256": "f53c5642e4d0779c20e3d05a498ef1e26644b0a27838fcd0cc1db4b83d8397c9"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "No license or copyright text found (cp037 scan). Maintainer 'Soldier of FORTRAN'; no homepage given.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "sysgen jcl/customize.jcl l.13 (step_13_customize); version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type XMI; size 109112 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-review",
+      "role": "MVP package REVIEW installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/REVIEW",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "52.5",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/REVIEW",
+          "sha256": "ee3f714a960fc7931b0e24cebb1adaa362a0c40d286ebe40ef73e4a14ff17715"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "No license text found (cp037 scan). Maintainer Greg Price; homepage https://www.prycroft6.com.au/REVIEW/ (not read).",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPF; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type XMI; size 1336320 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-dfspc",
+      "role": "MVP package DFSPC installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/DFSPC",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/DFSPC",
+          "sha256": "26b822c4c3c839381d5eda3654da6552eeb8737d024ef3247fe1f1c87ec3b2a5"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 112218 bytes (git blob, no line-ending conversion). Depends: MACLIB GETDTE."
+    },
+    {
+      "name": "mvp-pkg-dalcds",
+      "role": "MVP package DALCDS installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/DALCDS",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/DALCDS",
+          "sha256": "e19fefbaa8a0e7b99f3b6a115f6a2ee0fc247b107b21f469cac119fc3df70a1f"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 108545 bytes (git blob, no line-ending conversion). Depends: MACLIB GETDTE."
+    },
+    {
+      "name": "mvp-pkg-ducbd",
+      "role": "MVP package DUCBD installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/DUCBD",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/DUCBD",
+          "sha256": "c788fc941dd34748ef36eefa835c12cafa36915e29752177ff7ecf96e2f1dd87"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 130201 bytes (git blob, no line-ending conversion). Depends: MACLIB GETDTE."
+    },
+    {
+      "name": "mvp-pkg-ccompr",
+      "role": "MVP package CCOMPR installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/CCOMPR",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "0.9",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/CCOMPR",
+          "sha256": "2b3846af07e69d184e48f7e00034665b176544bd7cbb7463716c7a10d1829e2e"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 155434 bytes (git blob, no line-ending conversion). Depends: MACLIB COMPARE PRINTOFF. Version mismatch: MVP cache says 0.9, desc says 1.0; the lock records the cache value, which MVP's installer reads."
+    },
+    {
+      "name": "mvp-pkg-findsrch",
+      "role": "MVP package FINDSRCH installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/FINDSRCH",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "0.9.11",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/FINDSRCH",
+          "sha256": "bbb913092008545625c8bbb3cb022e4af596f81c5c82f5cd6c82b894222380d1"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 273108 bytes (git blob, no line-ending conversion). Depends: MACLIB CHKDSN LISTDSJ CUTIL00 VTOC. Version mismatch: MVP cache says 0.9.11, desc says 1.0; the lock records the cache value, which MVP's installer reads."
+    },
+    {
+      "name": "mvp-pkg-ispopt5",
+      "role": "MVP package ISPOPT5 installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ISPOPT5",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "0.9",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ISPOPT5",
+          "sha256": "85f701ea05a4a4e522474e3751d73345892d72bd64bb30bb83a7a4d0f5789d24"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 571902 bytes (git blob, no line-ending conversion). Depends: MACLIB PUTCARD."
+    },
+    {
+      "name": "mvp-pkg-ulxl01",
+      "role": "MVP package ULXL01 installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ULXL01",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.1",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/ULXL01",
+          "sha256": "a7d2c1f39603d81e42970f7e90c57bff090a11ac91fbe0f5f63241c46c45ee9d"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Maintainer Larry Belmontes Jr.; no copyright notice found in the package text.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 148424 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-wrldwtch",
+      "role": "MVP package WRLDWTCH installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/WRLDWTCH",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "0.9",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/WRLDWTCH",
+          "sha256": "02bc66bdfc3b6634d5dca4bd59f465f86d667f0022bddc470b084fe26e3a2e96"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute. Also based on CBT File 366 (Marvin Shaw).",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPTHEME; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 56992 bytes (git blob, no line-ending conversion). Depends: MACLIB."
+    },
+    {
+      "name": "mvp-pkg-maclib",
+      "role": "MVP package MACLIB installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/MACLIB",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/MACLIB",
+          "sha256": "cc06338b9a28cd6be80e05f5db94588313c118e6b3596f81c17453796b23240c"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text quotes the TK4- manual: the distribution 'is put into the public domain without claiming any copyright by the author as far as no third party copyrights are affected'. Contents include macros of mixed and possibly IBM origin.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of DFSPC, DALCDS, DUCBD, CCOMPR, FINDSRCH, ISPOPT5, WRLDWTCH, GETDTE, CHKDSN, LISTDSJ, CUTIL00, PUTCARD; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 420758 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-getdte",
+      "role": "MVP package GETDTE installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/GETDTE",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/GETDTE",
+          "sha256": "2ab07cf41b25afb14ffe240ada4453f48fb787f33ddc3a7cfd947a418f00ac40"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of DFSPC, DALCDS, DUCBD; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 125570 bytes (git blob, no line-ending conversion). Depends: MACLIB."
+    },
+    {
+      "name": "mvp-pkg-compare",
+      "role": "MVP package COMPARE installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/COMPARE",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.11",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/COMPARE",
+          "sha256": "c861eae5527b40c3284c12e49b8e433f3e0be3de12766eb62c89657bccfeba3c"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "No license text found. Origin: CBT Tape File 296 (Bill Godfrey, Planning Research Corporation).",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of CCOMPR; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 179927 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-printoff",
+      "role": "MVP package PRINTOFF installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/PRINTOFF",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/PRINTOFF",
+          "sha256": "8c377b367bbadf75d699913e99e2d1b64b8c9cfa654e18194e051f63211564ca"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text: 'COPYRIGHT = NONE'. Source: jaymoseley.com cbt_ware.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of CCOMPR; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 225046 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-chkdsn",
+      "role": "MVP package CHKDSN installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/CHKDSN",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/CHKDSN",
+          "sha256": "8275c7b648fb4536e8add0705f1e5faaee74a6b71e5c4349b8a2b02d3d5f5eb7"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of FINDSRCH; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 95051 bytes (git blob, no line-ending conversion). Depends: MACLIB."
+    },
+    {
+      "name": "mvp-pkg-listdsj",
+      "role": "MVP package LISTDSJ installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/LISTDSJ",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "2.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/LISTDSJ",
+          "sha256": "0011fddd6b0b71a6af15836a5bb503d4b9c34905b9a97183f069f4a3301de3d0"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of FINDSRCH; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 443505 bytes (git blob, no line-ending conversion). Depends: MACLIB."
+    },
+    {
+      "name": "mvp-pkg-cutil00",
+      "role": "MVP package CUTIL00 installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/CUTIL00",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.1.5",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/CUTIL00",
+          "sha256": "73de97fdbcb5f2b967729e158f3a6e9a1fa69e13b582457a85443d341aa86826"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "Package text carries 'Copyright (C) <years> Larry Belmontes, Jr.' with an AS-IS disclaimer, a request to keep the author's name in modified versions, and a reference to the 'MVS 3.8J hobbyist public domain community'. No explicit grant to copy or redistribute.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of FINDSRCH; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 640418 bytes (git blob, no line-ending conversion). Depends: MACLIB."
+    },
+    {
+      "name": "mvp-pkg-vtoc",
+      "role": "MVP package VTOC installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/VTOC",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/VTOC",
+          "sha256": "9ca1f9373e0a3ddc5bc181db5342a9ab5fca60a1dd0fefb73745191a2eb3ddc0"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "No license text found; author line 'R. F. MORSE, MIT INSTRUMENTATION LABORATORY 1968'. Source: jaymoseley.com cbt_ware.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of FINDSRCH; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 613203 bytes (git blob, no line-ending conversion). Depends: none."
+    },
+    {
+      "name": "mvp-pkg-putcard",
+      "role": "MVP package PUTCARD installed during sysgen",
+      "source_url": "https://github.com/MVS-sysgen/MVP/blob/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/PUTCARD",
+      "commit": "4c004a599f6a49442fade63cdb3cc3a9e0fdf58a",
+      "version": "1.0",
+      "tag": null,
+      "artifacts": [
+        {
+          "url": "https://raw.githubusercontent.com/MVS-sysgen/MVP/4c004a599f6a49442fade63cdb3cc3a9e0fdf58a/packages/PUTCARD",
+          "sha256": "a73e548eb7d3658a40f514f276ac0918f6c9a12e258ae37332e923668a41ccf9"
+        }
+      ],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "From Xephon magazine (cbttape.org/xephon mvs9809.pdf); the package doc says the Xephon copyright 'no longer applies' and that permission to post was obtained from SDS. Second-hand statement, not verified.",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "dependency of ISPOPT5; version from MVP cache@4c004a59; dependency closure from desc/ Depends:",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
+      "notes": "MVP package type JCL; size 15635 bytes (git blob, no line-ending conversion). Depends: MACLIB."
+    }
+  ],
+  "excluded": [
+    {
+      "name": "ufs370",
+      "source_url": "https://github.com/mvslovers/ufs370",
+      "observed_head": "f1f209a8d9852702162b442784c717c2cf0c15b6",
+      "reason": "Not installed by pinned sysgen or MVP. Superseded by UFSD: libufs is 'a drop-in replacement for ufs370', and UFSD is based on Rayborn's 'in-address-space UFS370 filesystem'. An in-address-space design conflicts with spec section 3 (one cross-address-space filesystem owner).",
+      "evidence": "grep -i ufs370 over sysgen@4746195d *.py *.conf README.md jcl/ and MVP cache: no hits; ufsd README@1a63bf52 l.6, l.99, l.106; ufs370 README@f1f209a8 (license MIT per API, not read).",
+      "revisit": "If OSE-005 finds UFSD unsuitable, re-evaluate UFS370 (it advertises symlinks and access control)."
+    },
+    {
+      "name": "docker-mvsce",
+      "source_url": "https://github.com/MVS-sysgen/docker-mvsce",
+      "observed_head": "e865cdb4cae91d6a184d778215776af09c772831",
+      "reason": "Optional runtime harness only (spec section 2); not the build host (ADR-0003). The upstream sysgen Dockerfile uses a mutable base image mainframed767/hercules:latest and an unpinned HercConsole clone.",
+      "evidence": "ADR-0003; sysgen@4746195d Docker/Dockerfile l.4, l.11.",
+      "revisit": "When an optional container harness is proposed."
+    }
+  ],
+  "pending_enforcement": [
+    {
+      "component": "mvp",
+      "issue": "Pin recorded but not enforced: sysgen clones MVP from its default branch (sysgen.py l.2734) and runs pull --ff-only on an existing clone (l.3247).",
+      "owner": "OSE-013",
+      "blocks": "OSE-003 (OSE-002 gate amended 2026-11-26: recording only)"
+    },
+    {
+      "component": "rakf",
+      "issue": "Pinned by tag v2.1.0, not SHA; a moved tag would go unnoticed.",
+      "owner": "OSE-013",
+      "blocks": "OSE-003 reproducibility claim"
     }
   ]
 }

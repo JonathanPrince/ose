@@ -42,3 +42,24 @@ Each is a pointer to verify, not a finding.
 1. MVP is unpinned. It needs sysgen patch P-01 (`upstream/sysgen/MANIFEST.md`).
 2. RAKF is pinned by tag, not SHA. The wrapper should verify after clone that `git rev-parse HEAD` = 941b07dc, or P-01 should accept a SHA.
 3. Hercules is unchecked. `make doctor` must enforce the version in the lock.
+
+## Addendum (OSE-002 rework 1, 2026-11-26)
+
+### P-8 MVP packages installed by sysgen (observed)
+P-1 missed these. Sysgen installs MVP packages through JCL that runs the MVP procedure:
+
+| Sysgen step | JCL | Packages |
+|---|---|---|
+| sysgen.py l.2860 | `jcl/nje38.jcl` l.12 `INSTALL='NJE38 -D'` | NJE38 |
+| sysgen.py l.2881 | `jcl/ispf.jcl` l.12–13 | ISPF, ISPTHEME |
+| step_13_customize, sysgen.py l.3010–3013 | `jcl/customize.jcl` l.13 | OPNTERSE |
+
+`-D` is MVP's debug flag (`MVP.rexx` l.15, l.25, l.35). Dependencies are always resolved from `desc/<pkg>` `Depends:` lines (`MVP.rexx` l.285–302). The resulting closure has 22 packages, listed as `mvp-pkg-*` in the lock. Package bodies live in the MVP repo (`packages/`), so the MVP commit pins their content and nothing further is downloaded. Two version discrepancies: CCOMPR is `cache` 0.9 vs `desc` 1.0, and FINDSRCH is `cache` 0.9.11 vs `desc` 1.0. The lock records the `cache` value.
+
+Security leads for OSE-007 (observed text, effect unverified): the package jobstreams carry `USER=IBMUSER,PASSWORD=SYS1` (NJE38 and ISPTHEME headers), and NJE38 installs an authorization table (`AUTHLIST`). Whether sysgen changes the IBMUSER password afterwards was not checked.
+
+### P-9 Windows line-ending hazard (observed)
+On this workstation `core.autocrlf=true`. In the working tree of the MVP checkout, the text packages were rewritten with CRLF (NJE38: 1,729,546 bytes on disk vs 1,696,693 in the blob, so different sha256). The XMI packages were not changed (ISPF matches its blob). The authoritative hashes come from `git cat-file blob`, and all 22 equal fresh downloads from raw.githubusercontent. **Consequence:** any cache, wrapper or bind mount that feeds sysgen from a Windows checkout can silently corrupt MVP jobstreams. OSE-003 and OSE-013 must clone with `-c core.autocrlf=false` and verify package hashes against the lock.
+
+### P-10 UFS370 (observed)
+Sysgen and MVP never reference UFS370 (grep over sysgen `*.py *.conf README.md jcl/` and MVP `cache`). UFSD describes libufs as "a drop-in replacement for ufs370", and UFSD as based on "the in-address-space UFS370 filesystem" (ufsd README@1a63bf52 l.6, l.99, l.106). It is recorded under `excluded` in the lock with a condition for revisiting it.

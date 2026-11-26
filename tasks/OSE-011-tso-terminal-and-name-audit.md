@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: BACKLOG (source part READY after OSE-002; guest listing needs OSE-003)
+Status: READY (source part; approved 2026-11-26; OSE-002 VERIFIED; guest listing still needs OSE-003)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner:

@@ -33,7 +33,9 @@ TASK_SECTIONS = ["## Goal", "## Acceptance tests", "## Escalation triggers",
 ADR_STATUSES = {"Proposed", "Accepted", "Rejected", "Superseded", "Deprecated"}
 LOCK_KEYS = ["name", "source_url", "commit", "version", "license_spdx",
              "redistribution", "pinned_by", "verified_date", "verified_by"]
-USAGE_KEYS = ["task", "attempt", "date", "role", "tier"]
+EXCLUDED_KEYS = ["name", "source_url", "reason", "evidence"]
+PENDING_KEYS = ["component", "issue", "owner"]
+USAGE_KEYS =["task", "attempt", "date", "role", "tier"]
 LINK_FILES = ["README.md", "AGENTS.md", "docs/status.md", "tasks/BOOTSTRAP.md",
               "docs/adr/README.md", "docs/research/README.md"]
 SHA1 = re.compile(r"^[0-9a-f]{40}$")
@@ -131,6 +133,17 @@ def check_lock(root: Path) -> list[str]:
         for a in c.get("artifacts", []) or []:
             if not SHA256.match(str(a.get("sha256", ""))):
                 errs.append(f"{label}: artifact {a.get('url')} needs 64-hex sha256")
+    for i, x in enumerate(data.get("excluded", []) or []):
+        for k in EXCLUDED_KEYS:
+            if not isinstance(x, dict) or not x.get(k):
+                errs.append(f"dependencies.lock.json excluded[{i}]: missing '{k}'")
+    for i, x in enumerate(data.get("pending_enforcement", []) or []):
+        for k in PENDING_KEYS:
+            if not isinstance(x, dict) or not x.get(k):
+                errs.append(f"dependencies.lock.json pending_enforcement[{i}]: missing '{k}'")
+        if isinstance(x, dict) and x.get("component") not in names:
+            errs.append(f"dependencies.lock.json pending_enforcement[{i}]: unknown component "
+                        f"'{x.get('component')}'")
     return errs
 
 

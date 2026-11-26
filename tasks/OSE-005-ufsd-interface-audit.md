@@ -1,5 +1,5 @@
 # OSE-005 — UFSD source and interface audit
-Status: BACKLOG (READY when OSE-002 pins UFSD)
+Status: READY (OSE-002 VERIFIED 2026-11-26; pin is UFSD v1.5.2 = 1a63bf52)
 Milestone: M0
 Dependencies: OSE-002
 Owner:
