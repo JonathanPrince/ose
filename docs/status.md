@@ -34,7 +34,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | READY (source part) | economy → standard | — |
+| OSE-011 | TSO terminal and name audit | REVIEW (source accepted; guest listing pending OSE-003) | economy → standard | — |
 | OSE-012 | C subset and libc POSIX inventory | READY | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | VERIFIED (host enforcement; OSE-003 test 7 pending) | standard | — |
 | OSE-012 | C subset and libc POSIX inventory | VERIFIED (static inventory and compile probes) | economy, standard review | — |
@@ -73,3 +73,4 @@ Reviewed 3aa77c6: original pre-consumption validation finding resolved; all eigh
 OSE-013: VERIFIED (host-enforcement scope; independent re-review 2026-11-26). See the task card for tested scope and evidence.
 OSE-005: VERIFIED (source-audit scope; independent re-review 2026-11-26). See the task card for tested scope and evidence.
 OSE-012 VERIFIED: header/probe findings resolved, ten-entry source sample checked, and all eleven expected compile/assemble outcomes independently reproduced. Guest runtime behavior remains outside this task.
+OSE-011: REVIEW (source part accepted; guest collision listing remains open). See the task card for tested scope and evidence.
