@@ -2,7 +2,7 @@
 
 Updated: 2026-11-26 by the coordinator (OSE-004, 005, 011, 012 and 013 merged to main on the human maintainer's instruction)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
-Guest lease: **held by OSE-003** (coordinator session; DASD sets `ose-sysgen-1` (first build; copy `ose-sysgen-1-negpin` for test 7) and `ose-sysgen-2` (clean-checkout repeat of test 2), Docker volumes created by `scripts/sysgen.sh`, exported to `artifacts/sysgen/`; since 2026-11-26T21:17Z). Release on OSE-003 handoff. See tasks/README.md "Guest resources".
+Guest lease: none held (released by OSE-003 on 2026-11-27). Built DASD sets kept as Docker volumes `ose-sysgen-1` (primary) and `ose-sysgen-2` (clean-checkout repeat), plus `ose-sysgen-1-negpin` (test 7 copy, may be deleted). The next guest task must take the lease first. See tasks/README.md "Guest resources".
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -20,8 +20,8 @@ Merged to main after independent review (2026-11-26):
 
 | Gate criterion | Tasks | Evidence | State |
 |---|---|---|---|
-| Clean pinned Sysgen build boots twice | 002, 013, 003 | `upstream/sysgen/MANIFEST.md` (P-01 patch, validate-before-consumption interface); T-PIN-001..009 | not started (enforcement host-verified; OSE-003 owns the run and test 7) |
-| Native TSO/JES smoke tests | 003 | | not started |
+| Clean pinned Sysgen build boots twice | 002, 013, 003 | OSE-003: sysgen RC 0 twice (incl. clean checkout), 2 cold IPLs per build, pins validated before and after, negative pin test; runbook sysgen-and-ipl | met on the task branch, awaiting review (test 6 repeat by a second agent open) |
+| Native TSO/JES smoke tests | 003 | OSE-003 `make smoke`: JES2 step RCs 0000/0004 from spool; TSO logon/TIME/logoff as non-admin MVSCE02 | met on the task branch, awaiting review |
 | Compile/deploy hello | 004 | `make build` RC 0; HELLO load module and XMIT reproducible (research 2026-11-26-toolchain T-7; runbook hello-compile-deploy) | host part accepted and merged; deploy and guest runs not started |
 | UFSD read/write across two guest clients | 005, 006 | research 2026-11-26-ufsd-audit (source only) | source audit VERIFIED; guest tests not started |
 | Dependency/license inventory | 002, 004 | dependencies.lock.json (39 components incl. maclib370, 2 excluded, 2 pending_enforcement now host-verified by OSE-013); research 2026-11-26-sysgen-pins, -licensing | VERIFIED 2026-11-26 (end-to-end pin proof: OSE-003 test 7) |
@@ -35,7 +35,7 @@ Merged to main after independent review (2026-11-26):
 |---|---|---|---|---|
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
-| OSE-003 | Build host doctor and sysgen | READY (OSE-013 VERIFIED and merged; follow MANIFEST steps 2–3b incl. `--keep-temp`) | standard | — |
+| OSE-003 | Build host doctor and sysgen | IMPLEMENTED on `task/OSE-003-build-host-sysgen` (tests 1-5, 7 pass; test 6 needs a second agent); awaiting review | standard | coordinator |
 | OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 pending OSE-003 | standard | — |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
