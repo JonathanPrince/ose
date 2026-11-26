@@ -1,5 +1,5 @@
 # OSE-012 — Target C subset and LIBC/370 POSIX inventory
-Status: IMPLEMENTED (review round 1: changes requested 2026-11-26; rework done, probes run, awaiting re-review)
+Status: VERIFIED (inventory and compile probes; independent re-review 2026-11-26)
 Milestone: M0
 Dependencies: OSE-002; the compile probes run with the OSE-004 harness
 Owner: coordinator session (2026-11-26)
@@ -66,3 +66,13 @@ The probes show a construct needed by spec §3.2 (fixed-width types, explicit pa
   - Fix: strip comments before matching, and prefer the POSIX header. Regenerated the JSON: exactly `getenv`, `setenv` and `unsetenv` changed, now `include/stdlib.h:97/98/100`, with `getenv` also at `mvs/env.h:19`. No status changed.
   - Also corrected the research note's L-1 table and the compatibility table's Header cell. The card's allowed scope is the upstream column, so I note that the Header cell was edited too, to fix the same defect.
 - The probe `README.md` result column was updated as well.
+
+### Independent re-review — 2026-11-26
+
+Reviewer: Codex, high tier (escalated re-review following previous changes request), independent of author. Reviewed 3766df2 on review/OSE-012-r2. **Accepted / VERIFIED** for the card's static inventory and compile-probe scope.
+
+- R12-1 resolved: p04 now contains a valid escaped newline, and the p00 C89 control is present. R12-2 resolved: getenv/setenv/unsetenv use stdlib.h:97/98/100, with only getenv's real second declaration in mvs/env.h:19. The JSON no longer cites the comments at mvs/env.h:32-33 as declarations.
+- Parsed all 61 JSON entries and re-derived the same deterministic random sample (seed 20261126): fork, posix_spawn, read, getegid, fileno, stat, sleep, unsetenv, dup and time from libc370@fcde4e88. Classification/reference checks passed (RC 0); checked all three corrected header rows directly against the pin. Search-hit text is retained under this worktree's ignored artifacts/review-search-*.txt.
+- Independently rebuilt the pinned OSE-004 compiler/libc in an exported tree (see OSE-004 review for its separate worktree-container issue), then compiled AND assembled the nine probes, plus p00 with -std=c89 -pedantic-errors and p08 with -std=c99: **11 expected outcomes matched, runner RC 0**. p08 returned the expected RC 1 in default GNU89 mode; all other invocations returned RC 0, including p08 in C99 mode. Its diagnostic was the documented for-loop initial-declaration restriction. The spec 3.2 width/packing assertions compiled successfully; no escalation for an unavailable required construct.
+- Command: `docker run --rm --user 1000:1000 -v <OSE-004-r1>/artifacts/standalone:/ose -v <this-worktree>/tests/host/c-probes:/probes:ro -w /ose -e PATH=/ose/artifacts/toolchain/bin:/usr/local/bin:/usr/bin:/bin -e ASMDATE=10/21/26 -e ASMTIME=13.55 ose-toolchain:ose004 python3 -I artifacts/probe_review.py` -> RC 0. Exact compiler argv, each RC, object and diagnostic are retained in `artifacts/review/OSE-004-r1/artifacts/standalone/artifacts/evidence/review-probes/` relative to the main workspace; the runner is in that export's artifacts/probe_review.py.
+- `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 repository tests passed. No runtime C behavior or guest API was tested. Evidence establishes the probed constructs and layouts, not complete ISO C conformance. No implementation, dependency or guest change, merge or release. Human owns integration.
