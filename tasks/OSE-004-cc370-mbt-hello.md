@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: BLOCKED (2026-11-26: host build stops at the link; maclib370 is a required dependency that is not in the lock. Human decision needed, see Handoff)
+Status: READY (host part IMPLEMENTED 2026-11-26, awaiting review; acceptance 2-4 need the OSE-003 guest, a lease and a deploy-transport decision)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner: author model (standard tier)
@@ -33,23 +33,26 @@ mvslovers/cc370, libc370 and mbt at their pins, and their docs at mvslovers.read
 - Runtime ABEND → record the completion code and PSW; escalate after two failed attempts.
 
 ## Handoff
-- Changed files / commits: `scripts/build.sh` (new), `Makefile` (`build` target), `src/utils/hello/hello.c` (new), `docs/research/2026-11-26-toolchain.md` (new), `docs/runbooks/hello-compile-deploy.md` (new) and the runbook index, `docs/research/README.md`, `docs/status.md`, `tasks/usage.jsonl`, this card. Branch `task/OSE-004-hello-harness`.
+- Changed files / commits:
+  - New: `scripts/build.sh`, `src/utils/hello/hello.c`, `docs/research/2026-11-26-toolchain.md` (with addendum T-7), `docs/runbooks/hello-compile-deploy.md`.
+  - Changed: `Makefile` (`build` target), `dependencies.lock.json` (adds `maclib370`, approved by the human 2026-11-26, option a), `docs/research/2026-11-26-licensing.md` (addendum, question 10), the runbook and research indexes, `docs/status.md`, `tasks/usage.jsonl`, this card.
+  - Branch `task/OSE-004-hello-harness`: commit 16565eb (blocked state), then the link commit.
 - Commands run, RC, evidence paths (all under `artifacts/evidence/ose-004/`):
-  - `docker pull debian:bookworm-slim` → `debian@sha256:e67eeead…` (pinned in `scripts/build.sh`).
-  - `sh scripts/build.sh toolchain`: RC 1 twice (missing flex/bison, then no git in the image while adding the version stamp), then RC 0. Versions `cc370/as370/ld370 1.6.3 (802dde1)`. Logs in `cc370-build.log`, `versions.txt`, `apt-versions.txt`.
-  - `PROBE_DIR=… sh scripts/build.sh probes`: RC 0. p01–03 and p05–07 RC 0. p04 RC 1 (probe defect) and p08 RC 1 (C89 default); see `probes/` and `probes-extra/`.
-  - `sh scripts/build.sh hello`: RC 3. `hello.s` and `hello.o` were built; their sha256 is in `hello/sha256.txt`, and `hello.o` is identical across two toolchain builds.
-  - libc370 `make` without maclib370: RC 2 (`libc370-build-without-maclib370.txt`).
-  - `python scripts/check_repo.py`: RC 0. `python -m unittest discover -s tests/host`: RC 0.
+  - Toolchain: `sh scripts/build.sh toolchain` gave RC 1 three times (missing flex/bison; no git in the image, so no version stamp; libcc370rt not built), then RC 0. Versions `cc370/as370/ld370 1.6.3 (802dde1)`. maclib370 `extract.py --verify`: 1035/1035, RC 0.
+  - libc: `sh scripts/build.sh libc` → RC 0, `libc.a` `d3a422e8…`.
+  - hello: `sh scripts/build.sh hello` → RC 0, `HELLO` `81757408…`, `HELLO.xmit` `0e69e9fa…`. Byte-identical across runs once the timestamps were pinned (research T-7).
+  - **Acceptance 1: `make build` (GNU Make 4.2.1) → RC 0** after a clean rebuild of everything. The same hashes came out twice.
+  - Probes: `PROBE_DIR=… sh scripts/build.sh probes` (research T-4).
+  - `python scripts/check_repo.py`: RC 0. Host unittest: RC 0.
 - Tests not run and why:
-  - Acceptance 1 (`make build` RC 0 with a load module) is **blocked**: no `libc.a` without maclib370. `make` is also not installed on the Windows host; it is available in the container.
-  - Acceptance 2–4 (deploy, batch, TSO) are not run: blocked by the link, by the absent OSE-003 guest and lease, and by the transport decision (research T-6, mvsMF).
-  - Acceptance 5: compile-time parts are recorded (T-4, T-5). AMODE/RMODE and reentrancy are open until a link.
-- Decisions / ADRs: none taken. **Human decision requested:** (a) approve maclib370 v1.0.0 `e85286a7` into the lock (macro content license UNRESOLVED, TK5-derived); (b) derive the macros from the pinned MVS/CE image instead; or (c) lock the prebuilt libc370 2.25.1 sysroot asset. Details and trade-offs: research T-1.
+  - Acceptance 2–4 (deploy and confirmation listing, batch RC/output with a planted RC 4, TSO run) are not run: no guest (OSE-003), no lease, and the deploy transport is undecided (mbt uses mvsMF over HTTP Basic, an alternate access path for OSE-007).
+  - Acceptance 5: compile-time and link-time facts are recorded (T-4, T-5, T-7). The runtime dialect checks need the guest.
+- Decisions / ADRs: human decision 2026-11-26: option (a), maclib370 v1.0.0 `e85286a7` added to the lock. No ADR.
 - Known defects / blockers:
-  - maclib370 (above).
-  - The OSE-012 probe `p04_variadic_macros.c` contains a raw newline in a string literal. The fix belongs on the OSE-012 branch.
+  - The macros are TK5-derived; that they work on MVS/CE needs a guest run.
+  - The licence of the macro content is UNRESOLVED (licensing question 10).
+  - The OSE-012 probe `p04` has a raw newline in a string literal; the fix belongs on the OSE-012 branch.
   - Debian packages are not snapshot-pinned.
-- Next action: the human chooses an option for T-1. Then add the lock entry, implement the link stage in `scripts/build.sh`, and record the load-module sha256 and `file370 -v` attributes. Guest steps follow OSE-003.
+- Next action: standard-tier review of the host part. After OSE-003: choose a deploy transport, write `scripts/deploy.sh`, `jcl/hello/*` and `tests/guest/hello/*`, then run acceptance 2–4 under a lease.
 - Usage/cost if available: not metered.
 ## Independent review and gate result

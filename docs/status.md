@@ -27,7 +27,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | VERIFIED (merged to main) | economy, standard review | coordinator |
 | OSE-003 | Build host doctor and sysgen | BACKLOG (ADR-0003 accepted; needs OSE-013) | standard | — |
-| OSE-004 | CC/370 + MBT hello | BLOCKED (branch `task/OSE-004-hello-harness`): toolchain builds and hello compiles; link needs maclib370, which is not in the lock (human decision) | standard | — |
+| OSE-004 | CC/370 + MBT hello | host part IMPLEMENTED (branch `task/OSE-004-hello-harness`; `make build` RC 0, reproducible load module); guest part waits for OSE-003 | standard | — |
 | OSE-005 | UFSD interface audit | READY | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG | high | — |
@@ -39,7 +39,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-013 | Enforce MVP and RAKF pins | READY | standard | — |
 
 ## Decisions needed from the human
-Open 2026-11-26 (OSE-004): approve maclib370 v1.0.0 `e85286a7` into the lock, derive the macros from the MVS/CE image, or lock the prebuilt libc370 sysroot. See research 2026-11-26-toolchain T-1.
+Resolved 2026-11-26 (OSE-004): maclib370 v1.0.0 `e85286a7` approved into the lock (option a). Open from it: macro licensing (licensing question 10), and showing on a guest that the TK5-derived macros work on MVS/CE.
 
 Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement in OSE-013), and OSE-011, 012 and 013 were approved.
 

@@ -1,7 +1,7 @@
 # CC/370 toolchain on the host (OSE-004, host part)
 
 - Task: OSE-004. Date: 2026-11-26. Platform: Windows 11 workstation, with Docker Desktop 29.9.3 running the ADR-0003 option A container (`debian@sha256:e67eeead736ff7bbe258ef088bff683635c561b1fcfefad0806c1df4ab49ce0e`, linux/amd64, non-root uid 1000). No guest exists yet, so nothing here ran on MVS.
-- Pins: cc370 v1.6.3 `802dde1c`, libc370 v2.25.1 `fcde4e88`, mbt v3.0.1 `83fdb876` (lock). maclib370 v1.0.0 `e85286a7` was examined but is **not approved** (T-1).
+- Pins: cc370 v1.6.3 `802dde1c`, libc370 v2.25.1 `fcde4e88`, mbt v3.0.1 `83fdb876` (lock). maclib370 v1.0.0 `e85286a7` was examined but is **not approved** (T-1). **Update the same day: the human chose option (a), and maclib370 is now in the lock. The link results are in the addendum (T-7), which supersedes the "blocked" statements in T-1 and T-3.**
 - Evidence lives under `artifacts/evidence/ose-004/` (git-ignored). Reproduce with `scripts/build.sh` (runbook: [hello-compile-deploy.md](../runbooks/hello-compile-deploy.md)).
 - Confidence labels per ADR-0002.
 
@@ -81,3 +81,30 @@ The spec §3.2 constructs (fixed-width types and explicit packing) are available
 - `mbt deploy` (v3.0.1) uses **mvsMF**, a z/OSMF-style REST API, at `http://{host}:{port}/zosmf` with **HTTP Basic** authentication. That means plain HTTP: credentials are only base64-encoded on the wire. Defaults are host `localhost`, port `1080`, user `IBMUSER`, and the password comes from the environment or config (`mbt:scripts/mbt/mvsmf.py:6-7, 86, 120`; `scripts/mbt/config.py:22-32`).
 - Flow: pack the modules into one XMIT, upload it to `{HLQ}.MBT.XMIT.IN`, delete the target LINKLIB, then submit a TSO RECEIVE job and read its spool through the REST job API (`mbt:scripts/mbtdeploy.py:1-38`).
 - For OSE-007: deployment requires a **running mvsMF**, which research 2026-11-26-ufsd-audit G-12 and recon R-03 list as an alternate access path to guest data. A deploy path that avoids mvsMF, such as a Hercules card-reader submit of RECV370 JCL plus an XMIT on a tape or reader, should be evaluated before mvsMF is enabled. `make deploy` is not written yet: it needs both a guest and this decision.
+
+## T-7 Addendum (2026-11-26, after the human chose option a): link, load module, reproducibility
+
+- **Decision:** the human approved option (a). `dependencies.lock.json` now has `maclib370` at `e85286a7cb994eae4003143eba693ab7931b026e` (v1.0.0), with `license_spdx` and `redistribution` UNRESOLVED for the IBM macro content. The T-1 compatibility hazard (TK5 macros on MVS/CE) stays open until a guest run.
+- **maclib370 integrity (observed):** `python3 -I tools/extract.py --verify` reports "1035 of 1035 members re-encode to their EBCDIC SHA-256" (RC 0). `scripts/build.sh` copies `maclib/*.macro` and `amodgen/*.macro` (1035 files) into `<sysroot>/maclib370/macros`, where as370 looks for them.
+- **libcc370rt (observed):** the first link failed with `ld370: cannot find -lcc370rt`. cc370's own `runtime` target builds that library, using only cc370's macros (`cc370:Makefile:151-162`). It is now built and installed with `install-runtime`. This corrects T-2's "runtime skipped".
+- **libc370 (observed):** `MACLIB370=<sysroot>/maclib370 make install` → RC 0. It installs 131 headers, `libc.a` and 14 macro files (`artifacts/evidence/ose-004/libc370-build.log`).
+- **Timestamps (observed):** two builds of `libc.a` differed in 4 bytes. They are the as370 `&SYSDATE &SYSTIME` eye-catchers in `@@CRTSVC` (`libc370:src/mvs/svc/@@crtsvc.asm:12`) and `@@CTHRD` (`src/mvs/thread/@@cthrd.asm:24`). ld370 likewise stamps the LKED IDR and the XMIT `INMFTIME`. Both tools take pinned values from the environment (`cc370:as370/src/as370.c:507-521` `ASMDATE`/`ASMTIME`; `ld370/src/ld370.c:793-822` `LDDATE`/`LDTIME`). `scripts/build.sh` sets them to the libc370 pin's commit time, 2026-10-21 13:55 (`ASMDATE=10/21/26 ASMTIME=13.55 LDDATE=26294 LDTIME=135500`).
+  - **Correction to T-3:** the earlier claim that "two toolchain builds produced the same `hello.o`" held only because both builds ran on the same day. The END card carries the assembly date. With the pinned date, `hello.o` has a new hash (below).
+- **Acceptance test 1, `make build` (GNU Make 4.2.1 from Strawberry Perl on the host): RC 0.**
+  - A clean run from an empty `artifacts/toolchain` (`scripts/build.sh all`, about 2.5 min) and a second run gave the same hashes:
+
+| Artifact | sha256 |
+|---|---|
+| `libc.a` | `d3a422e823cfac161cc0cc9107577ef7c3fe5aee103e4a7855395a0b6cd754ab` |
+| `hello.s` | `866cd3026ea6aa6b658ad8352ae15658f25f28086239371ac2ad83ec944bb55c` |
+| `hello.o` | `1a1001c4fdc7d8078f9ffe08433ed0583959bce14ed726c94990fd7744954007` |
+| `HELLO` (load module member) | `8175740845632edcdf0af04785c82c67e1d0a24fb3e8bf3871be600c223d636a` |
+| `HELLO.xmit` (TSO TRANSMIT for RECV370/RECEIVE) | `0e69e9fa44689fc49a27541084f9cd77ff715f761772a3c98e664529857d0d9f` |
+
+  - `HELLO` and `HELLO.xmit` were also byte-identical across two hello builds about a minute apart.
+- **Load module (observed, `file370 -v`):**
+  - 84813 bytes: 19 CESD records, 2 IDR records, 6 text records, 32 control records (26 with RLD), MODEND.
+  - Directory entry: `entry=0000C8 modlen=72880`, `ATR1=02 ATR2=C2 AC=00`. file370 decodes this as `[EXEC AC=0]`: **not RENT and not REUS**, which is ld370's default since cc370#100, and not authorized.
+  - The XMIT names `IBMUSER.HOST.LOAD` as its origin data set. This is a header field only; RECEIVE chooses the target.
+- **AMODE/RMODE:** the MVS 3.8j PDS directory entry that file370 decodes carries no AMODE/RMODE fields (observed in the decode above). On MVS/370, everything is 24-bit (hypothesis to confirm with an IBM manual). For acceptance test 5, OSE records "not applicable on the target".
+- **Still open:** acceptance 2–4 (deploy, batch RC/output, TSO run) need the OSE-003 guest, a lease, and the deploy-transport decision (T-6). So do the runtime C dialect checks.

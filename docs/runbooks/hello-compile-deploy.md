@@ -1,9 +1,9 @@
-# Runbook: build the CC/370 toolchain and compile hello (OSE-004)
+# Runbook: build the CC/370 toolchain and the hello load module (OSE-004)
 
-Last verified: 2026-11-26, on branch `task/OSE-004-hello-harness`, Windows 11 + Docker Desktop 29.9.3 (Git Bash). **Partial:** compile and assemble only. Link, deploy and run are blocked (see "Blocked steps").
+Last verified: 2026-11-26, on branch `task/OSE-004-hello-harness`, Windows 11 + Docker Desktop 29.9.3 (Git Bash), GNU Make 4.2.1. **Host part verified:** toolchain, libc and the hello load module. Deploy and run wait for the guest.
 
 ## Prerequisites
-- Docker with a running engine. Git and a POSIX `sh` (Git Bash on Windows).
+- Docker with a running engine. Git and a POSIX `sh` (Git Bash on Windows). GNU make is optional: `make build` only calls `sh scripts/build.sh all`.
 - Network access to github.com and the Debian mirror the first time.
 - About 2 GB free under `artifacts/` (git-ignored).
 
@@ -11,11 +11,24 @@ Last verified: 2026-11-26, on branch `task/OSE-004-hello-harness`, Windows 11 + 
 
 | Step | Command | Success looks like | Failure looks like |
 |---|---|---|---|
-| 1. Toolchain | `sh scripts/build.sh toolchain` | RC 0, and it prints `cc370 1.6.3 (802dde1), based on GCC 3.4.6` plus as370 and ld370 at `802dde1` | RC 1 and `toolchain build failed`; read `artifacts/evidence/ose-004/cc370-build.log` |
-| 2. Dialect probes | `PROBE_DIR=<dir with p*.c> sh scripts/build.sh probes` (the OSE-012 probes live on `task/OSE-012-libc-inventory` in `tests/host/c-probes`) | `pNN rc=…` lines in `artifacts/evidence/ose-004/probes/summary.txt` | RC 1: no probe sources, or no toolchain |
-| 3. hello | `sh scripts/build.sh hello` | prints the sha256 of `hello.s` and `hello.o`, then **RC 3** "hello link blocked: maclib370 is not an approved dependency" | RC 1: compile error; see the messages above it |
+| Everything | `make build` (or `sh scripts/build.sh all`) | RC 0, then the version lines, the maclib370 verify line and the sha256 lines below | RC 1 with `build.sh: … failed`; read the log it names under `artifacts/evidence/ose-004/` |
+| 1. Toolchain | `sh scripts/build.sh toolchain` | `cc370 1.6.3 (802dde1), based on GCC 3.4.6`, as370 and ld370 at `802dde1`, `verify: 1035 of 1035 members re-encode …` | `cc370-build.log` |
+| 2. libc | `sh scripts/build.sh libc` | `libc.a` sha256 `d3a422e8…` | `libc370-build.log` |
+| 3. hello | `sh scripts/build.sh hello` | sha256 lines for `hello.s`, `hello.o`, `HELLO`, `HELLO.xmit` | messages above the error; `hello/link.log` |
+| Probes (optional) | `PROBE_DIR=<dir with p*.c> sh scripts/build.sh probes` (the OSE-012 probes are on `task/OSE-012-libc-inventory`, in `tests/host/c-probes`) | `pNN rc=…` lines in `probes/summary.txt` | RC 1: no sources or no toolchain |
 
-`scripts/build.sh` pins the image by digest and every source by full commit SHA. It refuses a clone that is not at its pin or has local changes. Expected hashes for step 3 at the pins: `hello.o` sha256 `c3a870f9cf30bd9b672a793eb41ebe833a1afc4b8b8637273761a365843a1872`. If it differs, record the new value and the reason before going on.
+Expected hashes at the pins:
 
-## Blocked steps
-- **Link (load module), `make build`, `make deploy`, batch and TSO runs.** These need `libc.a`, which needs maclib370 (research 2026-11-26-toolchain T-1, which also gives the human's options). Deploy also needs the OSE-003 guest, a lease, and a decision on the transport (T-6, mvsMF).
+| File | sha256 |
+|---|---|
+| `libc.a` | `d3a422e823cfac161cc0cc9107577ef7c3fe5aee103e4a7855395a0b6cd754ab` |
+| `hello.o` | `1a1001c4fdc7d8078f9ffe08433ed0583959bce14ed726c94990fd7744954007` |
+| `HELLO` | `8175740845632edcdf0af04785c82c67e1d0a24fb3e8bf3871be600c223d636a` |
+| `HELLO.xmit` | `0e69e9fa44689fc49a27541084f9cd77ff715f761772a3c98e664529857d0d9f` |
+
+The build pins the assembly and link timestamps (`ASMDATE`, `ASMTIME`, `LDDATE`, `LDTIME` in `scripts/build.sh`), so these hashes repeat. If one differs, record the new value and find the cause before going on. The Debian packages are not snapshot-pinned, but they only build the host tools.
+
+`scripts/build.sh` pins the image by digest and every source by full commit SHA. It refuses a clone that is not at its pin or that has local changes.
+
+## Not yet possible
+- **Deploy (`make deploy`), batch run and TSO run.** These need the OSE-003 guest, a lease, and a decision on the deploy transport. mbt deploys through mvsMF; see research 2026-11-26-toolchain T-6. The XMIT is ready for a RECEIVE or RECV370 step.

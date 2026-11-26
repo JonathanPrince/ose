@@ -302,6 +302,23 @@
       "notes": "Annotated tag object 82016ba5. The commit prefix FCDE4E8 matches the UFSD banner, an independent cross-check. Newest is v2.29.2 (70e450f5). OSE-012 should diff 2.25.1 to 2.29.2 for POSIX functions."
     },
     {
+      "name": "maclib370",
+      "role": "MVS 3.8j SYS1.MACLIB and SYS1.AMODGEN macros as files, searched by as370; required to build libc370 >= 2.8.0 and by cc370 > 1.5.0",
+      "source_url": "https://github.com/mvslovers/maclib370",
+      "commit": "e85286a7cb994eae4003143eba693ab7931b026e",
+      "version": "1.0.0",
+      "tag": "v1.0.0",
+      "artifacts": [],
+      "license_spdx": "UNRESOLVED",
+      "license_evidence": "LICENSE@e85286a7 is MIT and covers only tools/, MANIFEST.tsv and README; README 'Origin and licenses': the IBM macros (maclib/, amodgen/) are not covered and no rights statement is made about them",
+      "redistribution": "UNRESOLVED",
+      "patches": [],
+      "pinned_by": "human approval 2026-11-26 (OSE-004 option a); libc370 sdk/maclib370.json@fcde4e88 accepts >=1.0.0 <2; v1.0.0 is the only tag",
+      "verified_date": "2026-11-26",
+      "verified_by": "OSE-004 (author session, standard tier)",
+      "notes": "Lightweight tag pointing at the commit. Content taken from a TK5 Update 5 system, not MVS/CE, including TK5 usermods (GETMAIN ZP60033 LOC=, WTO, WTOR, GTTERM, STFSMODE, IKTTCAST, IKTTVWA, IHADVA, IEAPMNIP, IEAPPNIP). 'tools/extract.py --verify' re-encodes 1035/1035 members to the EBCDIC SHA-256 in MANIFEST.tsv (RC 0, 2026-11-26). Compatibility of TK5 macro expansions with the pinned MVS/CE must be shown by a guest run (research 2026-11-26-toolchain T-1). Missed by the OSE-002 inventory."
+    },
+    {
       "name": "mbt",
       "role": "MVS build tool (host compile, link, package, deploy)",
       "source_url": "https://github.com/mvslovers/mbt",
