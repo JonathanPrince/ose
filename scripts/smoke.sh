@@ -13,11 +13,11 @@ SMOKE_EV=/work/evidence/smoke
 
 tools_image() {
     docker image inspect "$TOOLS_IMAGE" >/dev/null 2>&1 && return
-    log "building $TOOLS_IMAGE (adds s3270 from Debian main)"
+    log "building $TOOLS_IMAGE (adds s3270 and netbase from Debian main; upstream Docker/Dockerfile installs netbase too)"
     MSYS_NO_PATHCONV=1 docker build -q -t "$TOOLS_IMAGE" - >/dev/null <<EOF || die "tools image build failed"
 FROM $HERC_IMAGE
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends s3270 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends s3270 netbase && rm -rf /var/lib/apt/lists/*
 USER ose
 EOF
 }

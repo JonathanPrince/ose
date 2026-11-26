@@ -52,7 +52,7 @@
       "pinned_by": "OSE-002 (sysgen clones MVP unpinned; enforcing this pin needs sysgen patch P-01)",
       "verified_date": "2026-11-26",
       "verified_by": "OSE-002 rework after review (coordinator session, high tier)",
-      "notes": "sysgen git_clone() runs 'git pull --ff-only' on an existing clone without ref (sysgen.py l.3247), so a pre-staged detached checkout fails. A wrapper cannot pin it without P-01. The packages that sysgen installs are inventoried as separate mvp-pkg-* entries (review finding 1)."
+      "notes": "sysgen git_clone() runs 'git pull --ff-only' on an existing clone without ref (sysgen.py l.3247), so a pre-staged detached checkout fails. A wrapper cannot pin it without P-01. The packages that sysgen installs are inventoried as separate mvp-pkg-* entries (review finding 1). Pin enforced end to end (OSE-003 acceptance test 7, 2026-11-26): pins.py check-clone and check-mvp-packages OK before and after a real sysgen run (artifacts/evidence/ose-003/pins-pre.txt, pins-post.txt); patched sysgen reused the pre-staged clone at the pin (sysgen.log: 'git clone target /work/sysgen/temp/RAKF exists, checking out 941b07dc...' and '.../MVSCE/MVP exists, checking out 4c004a59...'); negative run with [mvp] commit 0000...0000 stopped in step 9 before the MVP install ('reference is not a tree', sysgen rc 1). pending_enforcement entry removed."
     },
     {
       "name": "hercules",
@@ -103,7 +103,7 @@
       "pinned_by": "sysgen@4746195d mvslovers.conf [rakf] ref = v2.1.0 (installed by git clone, sysgen.py l.2113)",
       "verified_date": "2026-11-26",
       "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "sysgen README l.184 says v2.0.0 (stale). mvslovers.conf, which the code reads, says v2.1.0. MVS-sysgen/RAKF redirects here. OSE must not ship RAKF patches or copies without a rights decision."
+      "notes": "sysgen README l.184 says v2.0.0 (stale). mvslovers.conf, which the code reads, says v2.1.0. MVS-sysgen/RAKF redirects here. OSE must not ship RAKF patches or copies without a rights decision. Pin enforced end to end (OSE-003 acceptance test 7, 2026-11-26): pins.py check-clone and check-mvp-packages OK before and after a real sysgen run (artifacts/evidence/ose-003/pins-pre.txt, pins-post.txt); patched sysgen reused the pre-staged clone at the pin (sysgen.log: 'git clone target /work/sysgen/temp/RAKF exists, checking out 941b07dc...' and '.../MVSCE/MVP exists, checking out 4c004a59...'); negative run with [mvp] commit 0000...0000 stopped in step 9 before the MVP install ('reference is not a tree', sysgen rc 1). pending_enforcement entry removed."
     },
     {
       "name": "brexx370",
@@ -838,24 +838,5 @@
       "revisit": "When an optional container harness is proposed."
     }
   ],
-  "pending_enforcement": [
-    {
-      "component": "mvp",
-      "issue": "Pin recorded but not enforced: sysgen clones MVP from its default branch (sysgen.py l.2734) and runs pull --ff-only on an existing clone (l.3247).",
-      "owner": "OSE-013",
-      "blocks": "OSE-003 (OSE-002 gate amended 2026-11-26: recording only)",
-      "status": "host-verified",
-      "host_tests": "T-PIN-001..009 (tests/host/test_pins.py), 2026-11-26, OSE-013; validate-before-consumption order in upstream/sysgen/MANIFEST.md steps 2-3",
-      "remaining": "OSE-003 acceptance test 7: real sysgen run shows the pinned SHA; then remove this entry"
-    },
-    {
-      "component": "rakf",
-      "issue": "Pinned by tag v2.1.0, not SHA; a moved tag would go unnoticed.",
-      "owner": "OSE-013",
-      "blocks": "OSE-003 reproducibility claim",
-      "status": "host-verified",
-      "host_tests": "T-PIN-001..009 (tests/host/test_pins.py), 2026-11-26, OSE-013; validate-before-consumption order in upstream/sysgen/MANIFEST.md steps 2-3",
-      "remaining": "OSE-003 acceptance test 7: real sysgen run shows the pinned SHA; then remove this entry"
-    }
-  ]
+  "pending_enforcement": []
 }

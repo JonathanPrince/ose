@@ -2,7 +2,7 @@
 
 Updated: 2026-11-26 by the coordinator (OSE-004, 005, 011, 012 and 013 merged to main on the human maintainer's instruction)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
-Guest lease: **held by OSE-003** (coordinator session; DASD set `ose-sysgen-1`, a Docker volume created by `scripts/sysgen.sh` and exported to `artifacts/sysgen/`; since 2026-11-26T21:17Z). Release on OSE-003 handoff. See tasks/README.md "Guest resources".
+Guest lease: **held by OSE-003** (coordinator session; DASD sets `ose-sysgen-1` (first build; copy `ose-sysgen-1-negpin` for test 7) and `ose-sysgen-2` (clean-checkout repeat of test 2), Docker volumes created by `scripts/sysgen.sh`, exported to `artifacts/sysgen/`; since 2026-11-26T21:17Z). Release on OSE-003 handoff. See tasks/README.md "Guest resources".
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
