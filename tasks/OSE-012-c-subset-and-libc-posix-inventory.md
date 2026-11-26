@@ -1,5 +1,5 @@
 # OSE-012 — Target C subset and LIBC/370 POSIX inventory
-Status: VERIFIED (inventory and compile probes; independent re-review 2026-11-26)
+Status: MERGED (VERIFIED, inventory and compile probes; independent re-review 2026-11-26; merged to main 2026-11-26 on the human maintainer's instruction)
 Milestone: M0
 Dependencies: OSE-002; the compile probes run with the OSE-004 harness
 Owner: coordinator session (2026-11-26)

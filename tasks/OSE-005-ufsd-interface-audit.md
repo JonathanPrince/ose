@@ -1,5 +1,5 @@
 # OSE-005 — UFSD source and interface audit
-Status: VERIFIED (source-audit scope; independent re-review 2026-11-26)
+Status: MERGED (VERIFIED, source-audit scope; independent re-review 2026-11-26; merged to main 2026-11-26 on the human maintainer's instruction)
 Milestone: M0
 Dependencies: OSE-002
 Owner: author model (standard tier; identity questions read at high tier)

@@ -1,5 +1,5 @@
 # OSE-002 — Inventory upstream versions and licenses; pin dependencies
-Status: VERIFIED (2026-11-26; see "Gate result"; records pins only, enforcement in OSE-013)
+Status: MERGED (VERIFIED 2026-11-26; merged to main 5970f87; records pins only, enforcement in OSE-013)
 Milestone: M0
 Dependencies: OSE-001
 Owner: coordinator session (2026-11-26)

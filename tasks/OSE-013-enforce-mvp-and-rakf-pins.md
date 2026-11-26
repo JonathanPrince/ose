@@ -1,5 +1,5 @@
 # OSE-013 — Enforce the MVP and RAKF pins in the Sysgen build
-Status: VERIFIED (host-enforcement scope; independent re-review 2026-11-26)
+Status: MERGED (VERIFIED, host-enforcement scope; independent re-review 2026-11-26; merged to main 2026-11-26 on the human maintainer's instruction; OSE-003 test 7 still pending)
 Milestone: M0
 Dependencies: OSE-002 (pins recorded in `dependencies.lock.json`)
 Owner: coordinator session (2026-11-26)

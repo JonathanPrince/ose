@@ -1,5 +1,5 @@
 # OSE-003 — Build host doctor and Sysgen wrapper; native TSO/JES smoke
-Status: BACKLOG (ADR-0003 accepted, option A; needs OSE-013 pin enforcement)
+Status: READY (2026-11-26: ADR-0003 accepted, option A; OSE-013 VERIFIED and merged. Follow upstream/sysgen/MANIFEST.md steps 1-3b, including sysgen --keep-temp)
 Milestone: M0
 Dependencies: OSE-002; OSE-013 (added in the OSE-002 rework); ADR-0003 (accepted). Clone all caches with `core.autocrlf=false` (research sysgen-pins P-9)
 Owner:
