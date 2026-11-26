@@ -28,7 +28,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | VERIFIED (merged to main) | economy, standard review | coordinator |
 | OSE-003 | Build host doctor and sysgen | BACKLOG (ADR-0003 accepted; needs OSE-013) | standard | — |
 | OSE-004 | CC/370 + MBT hello | READY (host part) | standard | — |
-| OSE-005 | UFSD interface audit | IMPLEMENTED (branch `task/OSE-005-ufsd-audit`; awaiting high-tier review) | standard → high | — |
+| OSE-005 | UFSD interface audit | IMPLEMENTED; review round 1 P1 fixed (branch `task/OSE-005-ufsd-audit`), awaiting re-review | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG | high | — |
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |

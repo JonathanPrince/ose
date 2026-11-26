@@ -1,5 +1,5 @@
 # OSE-005 — UFSD source and interface audit
-Status: IMPLEMENTED (2026-11-26; awaiting independent high-tier review)
+Status: IMPLEMENTED (review round 1: changes requested 2026-11-26; rework done, awaiting re-review)
 Milestone: M0
 Dependencies: OSE-002
 Owner: author model (standard tier; identity questions read at high tier)
@@ -51,3 +51,6 @@ Cannot determine how identity is established → hand that sub-question to OSE-0
 - Next action: independent high-tier review. A reviewer should re-derive at least U-1.4, U-2.3, U-3.1–3.3, U-4 (table), U-5.2, U-5.5 and U-7.5 from the cited lines. Then OSE-007 takes the escalation and OSE-006 the hypotheses.
 - Usage/cost if available: not metered (null in `tasks/usage.jsonl`).
 ## Independent review and gate result
+
+### Review round 1 (2026-11-26, relayed by the human): changes requested
+- **P1, recovery claim too strong:** accepted. The reviewer is right: truncate and unlink return blocks to the free cache before the inode is written, so an I/O failure can leave blocks both referenced and allocatable. Rework: U-7.6 corrected (safe for inodes only); new U-7.6a with the three failure paths and citations (`src/ufsd#fil.c:304-306, 308-347, 714-727, 794-801`; `src/ufsd#sbl.c:227-243`); new gap **G-15, rated M1**; added to the upstream-report list. Runtime confirmation needs an OSE-006 fault-injection test on a disposable image.
