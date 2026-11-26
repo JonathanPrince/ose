@@ -34,7 +34,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | source part IMPLEMENTED; review round 1 P2 fixed (library list from sysgen search orders), awaiting re-review; guest listing waits for OSE-003 | economy → standard | — |
+| OSE-011 | TSO terminal and name audit | REVIEW (source accepted; guest listing pending OSE-003) | economy → standard | — |
 | OSE-012 | C subset and libc POSIX inventory | READY | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | READY | standard | — |
 
@@ -60,3 +60,7 @@ Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement i
 1. Human: decisions 1–3 above.
 2. Critical path: OSE-013 (host-verified pin enforcement), then OSE-003 (container build host, sysgen, and the end-to-end pin proof in test 7).
 3. In parallel, on disjoint files: OSE-005 (UFSD audit at v1.5.2), OSE-012 inventory (libc370 v2.25.1 = fcde4e88), OSE-011 source part, OSE-004 host part. The leads in research sysgen-pins P-6 and P-8 are context for 004, 005 and 007.
+
+## Independent re-review — 2026-11-26
+
+OSE-011: REVIEW (source part accepted; guest collision listing remains open). See the task card for tested scope and evidence.

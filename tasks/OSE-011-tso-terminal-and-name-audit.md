@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: READY (source part IMPLEMENTED; review round 1: changes requested 2026-11-26, rework done, awaiting re-review; guest listing still needs OSE-003)
+Status: REVIEW (source part accepted; guest collision listing remains open)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -56,3 +56,11 @@ The only usable full-screen interface needs authorized code → flag for OSE-010
   - A completeness check is defined: every DSN named in the `CFG*` output must appear in `LIST`, otherwise the job is extended and re-run.
   - Residual risk: `&SYSUID` libraries are covered for IBMUSER only.
 - The JCL was checked for at most 71 columns and ASCII only. The job is still not run (it needs the OSE-003 guest).
+
+### Independent re-review — 2026-11-26
+
+Reviewer: Codex, high tier (escalated re-review following prior changes request), independent of author. Reviewed `2d4ec1c` on `review/OSE-011-r2`.
+
+Source part accepted. R11-1 resolved: the job now includes SYSC.PROCLIB, SYSC.LINKLIB, BREXX.LINKLIB, SYS1.CMDPROC, SYS2.EXEC and the other documented concatenation members, prints configuration members and requires checking configured DSNs against its LIST coverage before recording a collision result. Rechecked against pinned sysgen jcl/brexxcfg.jcl:21-26, jcl/mvs00.jcl:136-151 and jcl/sysgen05.jcl:526-537. Python assertions confirmed the previously missing LISTDS commands, ASCII-only JCL and <=71 columns (RC 0). Guest RC parsing, effective configuration confirmation and final collision table remain acceptance test 2; no guest listing or terminal exercise ran. Therefore the complete task is not VERIFIED.
+
+Validation in this worktree: `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 repository tests passed. No guest mutation, dependency change, merge or release. Human owns integration; this review does not alter other task branches.
