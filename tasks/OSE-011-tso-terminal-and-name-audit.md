@@ -1,15 +1,15 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: READY (source part; approved 2026-11-26; OSE-002 VERIFIED; guest listing still needs OSE-003)
+Status: READY (source part IMPLEMENTED 2026-11-26 on `task/OSE-011-tso-terminal-audit`, awaiting review; guest listing still needs OSE-003)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
-Owner:
+Owner: author model (standard tier)
 Risk: low
 Model tier: economy for extraction and listings; standard for the terminal API analysis
 Reviewer tier: standard
 Budget: local-only
 Branch: task/OSE-011-tso-terminal-audit
 Guest resources: read-only listing job; lease required
-Baseline commit:
+Baseline commit: 5970f87 (main)
 Origin: added by the OSE-001 coordinator. It covers the spec §10 M0 question "terminal APIs" and the spec §3.5 "name subject to collision audit"; BOOTSTRAP.md had no card for either.
 
 ## Goal and non-goals
@@ -31,11 +31,19 @@ MVS 3.8j TSO macros at the pin, historical TSO manuals by form number, libc370 s
 The only usable full-screen interface needs authorized code → flag for OSE-010 and the human.
 
 ## Handoff
-- Changed files / commits:
+- Changed files / commits: `docs/research/2026-11-26-tso-terminal-audit.md` (new), `jcl/audit/list-libraries.jcl` (new, not run), `docs/research/README.md` (index), `docs/status.md`, `tasks/usage.jsonl`, this card. Branch `task/OSE-011-tso-terminal-audit`.
 - Commands run, RC, evidence paths:
+  - Decoded the sysgen@4746195d IBM tapes (`tape/*.het`, zlib/bzip2 AWS blocks, cp037) with a throw-away scratchpad reader, then located the macro prototypes. RC 0. `zdlib1.het` sha256 is in the note.
+  - `pdftotext -layout documentation/mvs38bas.pdf` for the FMID and RELFILE mapping. RC 0.
+  - Cloned `mvslovers/brexx370@5aabe493` and `mvslovers/sdsf@cfb1b02b` with `core.autocrlf=false` into `artifacts/cache` (git-ignored). RC 0.
+  - Whole-token name search over the sysgen, MVP, ufsd, sdsf, brexx370 and libc370 sources and the decoded tapes. Results are in note N-2.
+  - JCL checked for at most 71 columns and ASCII only.
+  - `python scripts/check_repo.py`: RC 0. Host unittest: RC 0.
 - Tests not run and why:
-- Decisions / ADRs:
-- Known defects / blockers:
-- Next action:
-- Usage/cost if available:
+  - Acceptance test 2 (listing job RC and collision table from the guest): `jcl/audit/list-libraries.jcl` is written but not run. It needs the OSE-003 guest and a lease.
+  - Terminal behaviour (TGET ASIS, TPUT FULLSCR, STAX) has not been run. Those probes need the OSE-004 toolchain.
+- Decisions / ADRs: none. Candidate names (OMVS/OSH, HLQ OSE, STC OSE/OSED, subsystem OSE1/OSES) are proposals for the human. The M1 adapter recommendation (TPUT/TGET ASIS line mode behind an adapter interface, STAX attention, full screen later) is labelled a hypothesis.
+- Known defects / blockers: the escalation trigger did **not** fire, because BREXX FSS uses full screen unauthorized (note A-4). The TSO macro manual form numbers have not been read yet (open item).
+- Next action: standard-tier review of the source part. After OSE-003, run the listing job under a lease, record its RC and output in the note, and close acceptance test 2.
+- Usage/cost if available: not metered.
 ## Independent review and gate result

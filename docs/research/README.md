@@ -9,3 +9,4 @@ Do not commit bulk copies of IBM manuals or upstream source. Cite a document num
 | [2026-11-26-upstream-recon.md](2026-11-26-upstream-recon.md) | OSE-001 | Upstream heads, RAKF redirect, Sysgen defaults, build host |
 | [2026-11-26-sysgen-pins.md](2026-11-26-sysgen-pins.md) | OSE-002 | What Sysgen fetches, pin mechanics, asset hash verification, leads |
 | [2026-11-26-licensing.md](2026-11-26-licensing.md) | OSE-002 | License evidence per component; redistribution questions |
+| [2026-11-26-tso-terminal-audit.md](2026-11-26-tso-terminal-audit.md) | OSE-011 | TSO terminal macros (SVC 93/94/96), libc370 and BREXX terminal I/O, name-collision search |
