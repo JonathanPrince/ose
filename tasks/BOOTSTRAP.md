@@ -15,12 +15,14 @@
 
 Economy tasks may run concurrently on disjoint files. Tasks 003, 004, 006 and 009 must coordinate guest ownership. No M1 implementation until M0 review.
 
-## Coordinator additions (OSE-001, 2026-11-26; pending human approval)
+## Coordinator additions (OSE-001 and the OSE-002 rework, 2026-11-26; approved by the human 2026-11-26)
 
 | Task | Scope | Depends | Tier | Why added |
 |---|---|---|---|---|
 | OSE-011 | TSO terminal API and name-collision audit | 002 (003 for guest listing) | economy → standard | spec §10 "terminal APIs"; §3.5 "name subject to collision audit" |
 | OSE-012 | Target C subset and LIBC/370 POSIX inventory | 002 (004 harness for probes) | economy + standard review | spec §10 "target C subset"; §2 "audit existing POSIX functions" |
+
+| OSE-013 | Enforce MVP and RAKF pins (sysgen patch P-01 plus wrapper check) | 002 | standard | OSE-002 review finding 3: a mutable MVP fetch must be enforced, not just recorded. OSE-003 now depends on it |
 
 Clarifications that do not change the dependencies above:
 - OSE-004 compiles on the host after 002, but its guest run needs the image from OSE-003.
@@ -32,17 +34,17 @@ Each task's full card is `tasks/OSE-NNN-*.md`.
 ## Dependency graph and parallelism
 
 ```
-001 ──> 002 ─┬─> 003 ─┬─> 009
-             │        ├─> 004(guest) ─┬─> 006 <── 005
-             ├─> 004(host) ───────────┤
-             ├─> 005 ──> 007          └─> 008
+001 ──> 002 ─┬─> 013 ─> 003 ─┬─> 009
+             │                ├─> 004(guest) ─┬─> 006 <── 005
+             ├─> 004(host) ───────────────────┤
+             ├─> 005 ──> 007                  └─> 008
              ├─> 011(source) ... 011(guest needs 003)
              └─> 012(inventory) ... 012(probes need 004)
 all ──> 010 (gate)
 ```
 
-**Wave 1 (after 002):** 003, 004-host, 005, 011-source and 012-inventory can run in parallel on disjoint files. 005 and 012 are pure source reading and suit economy or standard tiers.
+**Wave 1 (after 002):** 013, 004-host, 005, 011-source and 012-inventory can run in parallel on disjoint files. 003 follows 013. 005 and 012 are pure source reading and suit economy or standard tiers.
 **Wave 2 (needs the guest; serialize on the lease):** 004-guest, 009, 011-guest, then 006.
 **Wave 3 (high tier, no guest needed):** 007 after 005; 008 after 004.
 
-The critical path is 002 → 003 → 004-guest → 006 → 010. The human's decision on ADR-0003 (build host) unblocks 003 and is the earliest decision needed.
+The critical path is 002 → 013 → 003 → 004-guest → 006 → 010. ADR-0003 is accepted (option A). The earliest open decisions are approving OSE-013 and choosing the OSE-002 gate option (docs/status.md).

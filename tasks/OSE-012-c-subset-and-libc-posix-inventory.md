@@ -1,5 +1,5 @@
 # OSE-012 — Target C subset and LIBC/370 POSIX inventory
-Status: BACKLOG (READY after OSE-002 pins cc370 and libc370)
+Status: READY (approved 2026-11-26; OSE-002 VERIFIED)
 Milestone: M0
 Dependencies: OSE-002; the compile probes run with the OSE-004 harness
 Owner:

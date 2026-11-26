@@ -29,3 +29,31 @@ Method: fetched `LICENSE`, `LICENSE.md`, `LICENSE.txt`, `COPYING`, `COPYING.txt`
 5. **OSE's own license:** not chosen. It must be compatible with linking libc370 (BSD-2) and libufs (MIT), and with any GPL obligations from question 4.
 
 None of these block **local** M0 work (building and testing on our own host). They block redistribution and M5.
+
+## Addendum (OSE-002 rework 1, 2026-11-26, after review)
+
+### Corrections to the table above
+Under ADR-0004 §6, an SPDX value is given only where a license text was read at the pin.
+- **ufsd-utils** → `UNRESOLVED`. The README declares MIT, but no license text exists.
+- **brexx370** → `UNRESOLVED` (license and redistribution). COPYING is the GPL v2 text. README l.123–132 says "licensed under the GNU General Public License, version 2 (GPL-2.0)" and lists bundled New BSD (`fss/`, `src/rxtso.c`, `inc/rxtso.h`), MIT (`map/`) and Unlicense (`regex/`) parts. Whether it is "only" or "or later" is not established from what was read.
+- **cc370** → `UNRESOLVED` for the same only/or-later reason; GCC 3.4.6-lineage headers were not read.
+- **Hercules** → `UNRESOLVED` (license and redistribution). COPYRIGHT says QPL-1.0, but `LICENSES/` also holds crypto, decNumber (ICU), SoftFloat and telnet licenses plus `herclic.html`, none of which have been read.
+
+### MVP packages installed by sysgen (review finding 1)
+Scan method: each package file at MVP@4c004a59 was searched for license, copyright, (c), public domain, GPL, MIT, freeware and permission wording. Text packages were read as ASCII; the XMI packages ISPF, OPNTERSE and REVIEW were decoded as cp037. Per-package evidence is in the `mvp-pkg-*` entries of `dependencies.lock.json`. All 22 are `UNRESOLVED`.
+
+| Rights evidence found | Packages |
+|---|---|
+| "Copyright (C) … Larry Belmontes, Jr.", AS-IS disclaimer, request to keep the author's name, reference to the "MVS 3.8J hobbyist public domain community"; **no explicit grant** | DFSPC, DALCDS, DUCBD, CCOMPR, FINDSRCH, ISPOPT5, WRLDWTCH, GETDTE, CHKDSN, LISTDSJ, CUTIL00 (ISPTHEME embeds the same notices) |
+| "COPYRIGHT 2021, WALLY MCLAUGHLIN" in members; no grant found | ISPF |
+| TK4- manual statement quoted: "put into the public domain without claiming any copyright by the author as far as no third party copyrights are affected"; the content may include IBM macros | MACLIB |
+| "COPYRIGHT = NONE" | PRINTOFF |
+| Second-hand note: the Xephon copyright "no longer applies", and posting permission was obtained from SDS | PUTCARD |
+| No rights text found | NJE38 (homepage github.com/moshix/nje38mvs, not read), OPNTERSE, REVIEW (homepage prycroft6.com.au, not read), ULXL01, COMPARE (CBT File 296), VTOC (CBT ware, 1968 MIT Instrumentation Laboratory author line) |
+
+### Additional questions for the human maintainer
+6. **Hercules:** read `LICENSES/` (QPL-1.0 plus the crypto, decNumber/ICU, SoftFloat and telnet terms) before any statement about redistributing Hercules or a container image that contains it.
+7. **UFSD:** its README says the on-disk format code was "originally contributed to The NetBSD Foundation by UCHIYAMA Yasushi". Do BSD notices have to be kept alongside UFSD's MIT license when OSE ships anything derived from libufs or UFSD source?
+8. **MVP packages:** the Belmontes notices assert copyright without granting redistribution. ISPF (McLaughlin) and several CBT-derived packages carry no grant either. Combined with question 1, this supports shipping **scripts only, never images**. Should OSE ask the authors for explicit terms? (Outreach: the human decides.)
+9. **brexx370 and cc370:** settle GPL-2.0-only vs -or-later by reading source headers, before OSE ships anything that links or bundles them.
+

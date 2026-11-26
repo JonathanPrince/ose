@@ -70,6 +70,16 @@ class RepoCopy(unittest.TestCase):
                 "artifacts": [{"url": "x", "sha256": "0" * 64}]}]}), encoding="utf-8")
         self.assertEqual(check_repo.check_lock(self.tmp), [])
 
+    def test_lock_excluded_and_pending_validation(self):
+        p = self.tmp / "dependencies.lock.json"
+        d = json.loads(p.read_text(encoding="utf-8"))
+        d["excluded"] = [{"name": "x", "source_url": "u", "reason": "r"}]          # no evidence
+        d["pending_enforcement"] = [{"component": "nope", "issue": "i", "owner": "OSE-999"}]
+        p.write_text(json.dumps(d), encoding="utf-8")
+        errs = check_repo.check_lock(self.tmp)
+        self.assertTrue(any("excluded[0]: missing 'evidence'" in e for e in errs))
+        self.assertTrue(any("unknown component 'nope'" in e for e in errs))
+
     def test_usage_bad_line(self):
         (self.tmp / "tasks/usage.jsonl").write_text('{"task":"OSE-001"}\nnot json\n', encoding="utf-8")
         errs = check_repo.check_usage(self.tmp)

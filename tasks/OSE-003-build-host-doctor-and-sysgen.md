@@ -1,7 +1,7 @@
 # OSE-003 — Build host doctor and Sysgen wrapper; native TSO/JES smoke
-Status: BACKLOG (needs OSE-002 pins and the human's choice on ADR-0003)
+Status: BACKLOG (ADR-0003 accepted, option A; needs OSE-013 pin enforcement)
 Milestone: M0
-Dependencies: OSE-002; ADR-0003 decision
+Dependencies: OSE-002; OSE-013 (added in the OSE-002 rework); ADR-0003 (accepted). Clone all caches with `core.autocrlf=false` (research sysgen-pins P-9)
 Owner:
 Risk: medium
 Model tier: standard
@@ -28,6 +28,7 @@ ADR-0003, ADR-0004, `dependencies.lock.json`, the sysgen README at the pin (reco
 4. JES2 smoke job (IEFBR14 plus a step with a planted nonzero RC). The host script parses each step RC from spool: expected 0000 and the planted value. Submission success alone does not count.
 5. TSO smoke: automated logon as a non-admin user, one command with checked output, then logoff. Use upstream tooling if it exists; otherwise use pinned s3270 scripting.
 6. A second agent or person repeats steps 1–4 using only the runbook.
+7. **Pin enforcement end to end** (moved here from OSE-013 on 2026-11-26 to remove a circular gate). The `make sysgen` run of test 2 uses OSE-013's patch and check. Its log shows MVP at `4c004a59…` and RAKF at `941b07dc…`, and the MVP package hashes match the lock. Also run once with a deliberately wrong MVP pin and show that sysgen stops with a nonzero RC before the MVP install. Then remove the `pending_enforcement` entries from the lock, citing this test's evidence.
 
 ## Escalation triggers
 - The Hercules or sysgen deadlock happens twice → BLOCKED with logs.
