@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: READY (source part IMPLEMENTED 2026-11-26 on `task/OSE-011-tso-terminal-audit`, awaiting review; guest listing still needs OSE-003)
+Status: READY (source part IMPLEMENTED; review round 1: changes requested 2026-11-26, rework done, awaiting re-review; guest listing still needs OSE-003)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -47,3 +47,12 @@ The only usable full-screen interface needs authorized code → flag for OSE-010
 - Next action: standard-tier review of the source part. After OSE-003, run the listing job under a lease, record its RC and output in the note, and close acceptance test 2.
 - Usage/cost if available: not metered.
 ## Independent review and gate result
+
+### Review round 1 (2026-11-26, relayed by the human): changes requested
+- **P2, listing job omits configured libraries:** accepted. The first job listed only SYS1/SYS2 CMDLIB, LINKLIB, LPALIB, PROCLIB and PARMLIB, and missed SYSC.PROCLIB, SYSC.LINKLIB, BREXX.LINKLIB and others.
+- Rework:
+  - The library list is derived from the search orders sysgen configures (link list, JES2 `PROC00`, master-subsystem path, TSO `SYSPROC`, BREXX `SYSEXEC`/`RXLIB`, STC step libraries, parameter libraries), each cited to the sysgen JCL in research note N-3.
+  - The job now has 23 `LISTDS` commands plus two `LISTCAT`, and six `CFG*` steps that print the live `LNKLST00`, `IEAAPF00`, `IEFSSN00`, `JES2`, `IKJACCNT` and `TSOLOGON`.
+  - A completeness check is defined: every DSN named in the `CFG*` output must appear in `LIST`, otherwise the job is extended and re-run.
+  - Residual risk: `&SYSUID` libraries are covered for IBMUSER only.
+- The JCL was checked for at most 71 columns and ASCII only. The job is still not run (it needs the OSE-003 guest).

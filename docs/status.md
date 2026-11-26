@@ -34,7 +34,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | source part IMPLEMENTED (branch `task/OSE-011-tso-terminal-audit`, awaiting review); guest listing waits for OSE-003 | economy → standard | — |
+| OSE-011 | TSO terminal and name audit | source part IMPLEMENTED; review round 1 P2 fixed (library list from sysgen search orders), awaiting re-review; guest listing waits for OSE-003 | economy → standard | — |
 | OSE-012 | C subset and libc POSIX inventory | READY | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | READY | standard | — |
 

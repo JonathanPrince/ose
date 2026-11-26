@@ -116,7 +116,26 @@ Result: **no collision found in the sources available on the host** (observed). 
 
 ### N-3 Guest listing (not run)
 
-`jcl/audit/list-libraries.jcl` lists the members of SYS1/SYS2 CMDLIB, LINKLIB, LPALIB, PROCLIB and PARMLIB, the catalog entries for level `OSE` and alias `OSE`, and prints `IEFSSN00`. It is read-only and carries no credentials. Expected RCs are in its header. **Status: not run.** It needs the OSE-003 guest and a lease. Card acceptance test 2 stays open until it has run and its RC and output are recorded here. **Hypothesis:** MVS 3.8j TSO `LISTDS … MEMBERS` works in batch under IKJEFT01. If it does not, switch to IEHLIST with volume DDs.
+**Revised after review round 1 (2026-11-26).** The reviewer found that the first version of the job left out configured libraries, such as SYSC.PROCLIB, SYSC.LINKLIB and BREXX.LINKLIB, so it could miss collisions. The library list is now derived from the search orders that sysgen at `4746195d` configures. In addition, the job prints the live configuration members, so libraries added after sysgen are caught as well.
+
+| Search order (what a colliding name would shadow or be shadowed by) | Libraries, in order | Configured at (sysgen `4746195d`) | Confidence |
+|---|---|---|---|
+| Link list (programs; TSO commands are found here because the logon proc has no STEPLIB) | SYS1.LINKLIB, **BREXX.LINKLIB**, SYS2.LINKLIB, SYS1.CMDLIB, SYS2.CMDLIB, **SYSC.LINKLIB** | `jcl/sysgen04.jcl:157-163` (`LNKLST00`); BREXX inserted by `jcl/brexxcfg.jcl:10-27` | documented |
+| LPA and SVC modules | SYS1.LPALIB, SYS1.SVCLIB (SYS2.LOCAL.LPALIB is temporary and deleted at `jcl/sysgen04.jcl:198`) | `jcl/sysgen00.jcl:216-222`; `jcl/sysgen04.jcl:198` | documented |
+| STC step libraries | HTTPD.LINKLIB, MVSMF.LINKLIB (HTTPD proc STEPLIB) | `mvslovers.py:809-825` | documented |
+| JES2 procedure libraries (STC and JCL procedure names) | SYS1.PROCLIB, **SYSC.PROCLIB**, SYS2.PROCLIB, SYS1.PROCLIB again. BREXX.PROCLIB is the source that RXTSO and RXBATCH are copied from, and is not searched itself. | `jcl/mvs00.jcl:136-151` (`JES2` proc `PROC00`); `jcl/brexxcfg.jcl:38-50` | documented |
+| Master-subsystem start path | SYS1.PROCLIB only (the UFSD lesson: a subsystem name equal to a procedure name moves `S name` here) | research 2026-11-26-ufsd-audit, `ufsd:include/ufsd.h:544-561` | documented |
+| TSO CLISTs (implicit commands) | logon proc `SYSPROC`: SYS1.CMDPROC, SYS2.CMDPROC; the logon CLIST then reallocates it to `&SYSUID..CLIST`, SYS1.CMDPROC | `jcl/sysgen05.jcl:81-87, 526` | documented |
+| REXX (BREXX) | `SYSEXEC` SYS2.EXEC, `SYSUEXEC` `&SYSUID..EXEC`, `RXLIB` BREXX.CURRENT.RXLIB (alias of BREXX.RXLIB), and STC execs in SYS2.STCEXEC | `jcl/sysgen05.jcl:529-537`; `jcl/brexxcfg.jcl:29-37, 53-56`; `jcl/finalize.jcl:27-42, 104` | documented |
+| Parameter libraries | SYS1.PARMLIB (IEFSSN00, LNKLST00, IEAAPF00), SYS2.PARMLIB | `jcl/sysgen04.jcl:63-97` | documented |
+| Catalog (HLQ `OSE`) | `LISTCAT LEVEL(OSE)`, `LISTCAT ENTRIES('OSE')` (alias) | — | — |
+
+How the job works (`jcl/audit/list-libraries.jcl`):
+- Steps `CFGLNK`, `CFGAPF`, `CFGSSN`, `CFGJES`, `CFGTSO` and `CFGLOG` print `LNKLST00`, `IEAAPF00`, `IEFSSN00`, `SYS1.PROCLIB(JES2)`, `SYS1.PROCLIB(IKJACCNT)` and `SYS1.CMDPROC(TSOLOGON)`.
+- Step `LIST` lists the members of every library in the table above. User libraries are covered for IBMUSER only (`IBMUSER.CLIST`, `IBMUSER.EXEC`). Other users' `&SYSUID` libraries cannot be enumerated in advance, which is an accepted residual risk. It only affects that user's own implicit commands.
+- **Completeness check, done when the job is run:** every DSN named in the `CFG*` output must appear among the `LIST` commands. If one is missing, the job is extended and re-run before the collision table is filled in.
+
+The job is read-only and carries no credentials. Expected RCs are in its header. **Status: not run.** It needs the OSE-003 guest and a lease. Card acceptance test 2 stays open until it has run and its RC and output are recorded here. **Hypothesis:** MVS 3.8j TSO `LISTDS … MEMBERS` works in batch under IKJEFT01. If it does not, switch to IEHLIST with volume DDs.
 
 ## Open items
 
