@@ -36,7 +36,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
 | OSE-011 | TSO terminal and name audit | READY (source part) | economy → standard | — |
 | OSE-012 | C subset and libc POSIX inventory | READY | economy, standard review | — |
-| OSE-013 | Enforce MVP and RAKF pins | IMPLEMENTED; review round 1 P2 fixed (validate before consumption, T-PIN-008), awaiting re-review | standard | — |
+| OSE-013 | Enforce MVP and RAKF pins | REVIEW: round 2 R13-2 (`--keep-temp`) fixed, awaiting check | standard | — |
 
 ## Decisions needed from the human
 Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement in OSE-013), and OSE-011, 012 and 013 were approved.
@@ -60,3 +60,7 @@ Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement i
 1. Human: decisions 1–3 above.
 2. Critical path: OSE-013 (host-verified pin enforcement), then OSE-003 (container build host, sysgen, and the end-to-end pin proof in test 7).
 3. In parallel, on disjoint files: OSE-005 (UFSD audit at v1.5.2), OSE-012 inventory (libc370 v2.25.1 = fcde4e88), OSE-011 source part, OSE-004 host part. The leads in research sysgen-pins P-6 and P-8 are context for 004, 005 and 007.
+
+## OSE-013 independent re-review — 2026-11-26
+
+Reviewed 3aa77c6: original pre-consumption validation finding resolved; all eight pin tests passed independently. One P2 handoff correction remains: require --keep-temp so the post-run RAKF clone check can run after Sysgen cleanup. See task card round 2 on review/OSE-013-r2. Not VERIFIED; OSE-003 end-to-end gate remains pending. Author fix for R13-2 (MANIFEST step 3a requires `--keep-temp`, T-PIN-009) is on `task/OSE-013-enforce-pins`, awaiting check.

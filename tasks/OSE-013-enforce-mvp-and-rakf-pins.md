@@ -1,5 +1,5 @@
 # OSE-013 — Enforce the MVP and RAKF pins in the Sysgen build
-Status: IMPLEMENTED (review round 1: changes requested 2026-11-26; rework done, awaiting re-review)
+Status: REVIEW (round 2: changes requested, R13-2 fixed by the author 2026-11-26; awaiting round-3 check)
 Milestone: M0
 Dependencies: OSE-002 (pins recorded in `dependencies.lock.json`)
 Owner: coordinator session (2026-11-26)
@@ -84,3 +84,23 @@ The patch needs more than a minimal change to sysgen → stop and propose an alt
   - `upstream/sysgen/MANIFEST.md` interface steps 2–3b now pre-stage the RAKF and MVP clones at their pins (LF-safe, at the paths sysgen uses) and validate them with `pins.py` **before** sysgen starts. The patched `git_clone` reuses the validated tree; a post-run check stays as evidence only.
   - New host test **T-PIN-008**: a corrupted pre-staged package is rejected; a valid tree passes, is reused unchanged by the patched `git_clone` (no re-clone, `HEAD` at the pin), and passes again afterwards. `python -m unittest tests.host.test_pins`: 8 tests, RC 0.
   - Lock `pending_enforcement` now cites T-PIN-001..008. The patch itself is unchanged (still 40 lines, T-PIN-001).
+
+### Independent review round 2 — 2026-11-26
+
+Reviewer: Codex, standard tier, independent of author. Reviewed `3aa77c6` against `b3ccf97` on isolated `review/OSE-013-r2`. Result: **changes requested**, limited to the handoff below; original R13-1 resolved.
+
+- Pre-staged, LF-safe RAKF/MVP clones and validation before Sysgen now resolve the prior validation-after-consumption finding. T-PIN-008 independently passed: corrupted package rejected, restored package accepted and reused at the pin.
+- **P2 / R13-2: retain RAKF for the mandatory post-run check.** `upstream/sysgen/MANIFEST.md:43-44` says run Sysgen, then repeat all three checks including `check-clone rakf <sysgen>/temp/RAKF`, and invalidate the build on failure. At sysgen@4746195d, `step_14_cleanup` deletes `temp/` unless `self.keeptemp` is true (`sysgen.py:3080-3082`); the CLI flag is `--keep-temp` (line 3462). The documented default successful run therefore fails the RAKF post-check with RC 2 because the clone is gone. Require `--keep-temp` in step 3a (or capture equivalent pin evidence before cleanup), and verify the wrapper retains the clone for OSE-003 test 7. This is a deterministic source-path finding; no full Sysgen run was performed.
+- Commands/results: `python -I artifacts/review/OSE-013-r2/artifacts/review_pins.py` from the main workspace, with approved escalation for temporary Git repositories: **8 tests passed, RC 0, 32.411 s**. Runner uses unchanged test source with only cache constants redirected to the shared `artifacts/cache/{sysgen,MVP}`; runner retained at that ignored path. All T-PIN-001..008 ran, including patch application/size and LF/CRLF hash checks.
+- In the review worktree: `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 repository tests passed and 8 cache-dependent tests skipped (covered by the separate redirected-cache run); `git diff --check` -> RC 0.
+- No guest, network clone, full Sysgen, merge or implementation change. `pending_enforcement` correctly remains host-verified pending OSE-003. Next action: correct the run instruction, then close R13-2 in re-review.
+
+### Author rework for round 2 (2026-11-26)
+- **R13-2 accepted.** `upstream/sysgen/MANIFEST.md`:
+  - Step 3a now **requires `sysgen --keep-temp`**, citing `sysgen.py:3080-3082` (cleanup) and l.3462 (flag) at the pin.
+  - Step 3b explains that an RC 2 for a missing `temp/RAKF` means the run produced no evidence and must be repeated with the flag. After the evidence is saved, the wrapper may delete `temp/` itself.
+  - Step 2 now says to start from clean clone targets.
+  - It also corrects my earlier citation, which gave the patched-file numbers (l.3083-3085) as if they were the pin's.
+- New host test **T-PIN-009**: the patched sysgen still defines `--keep-temp` and still guards `rmtree(Path("temp"))` with `if not self.keeptemp`, and MANIFEST step 3a names the flag. `python -m unittest tests.host.test_pins`: 9 tests, RC 0.
+- The lock's `pending_enforcement` now cites T-PIN-001..009. The patch is unchanged.
+- The OSE-003 card is outside this card's file scope, so OSE-003 must follow MANIFEST steps 2–3b, including `--keep-temp`, for its test 7.

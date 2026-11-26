@@ -10,6 +10,7 @@ Test IDs (cited from dependencies.lock.json pending_enforcement):
   T-PIN-007  pins.py check-mvp-packages: LF clone passes, autocrlf=true clone fails
   T-PIN-008  validate-before-consumption: a corrupt pre-staged MVP tree is rejected;
              a valid one passes and the patched git_clone reuses it unchanged
+  T-PIN-009  sysgen removes temp/ unless --keep-temp; MANIFEST step 3a requires it (R13-2)
 
 Tests needing the pinned upstream sources are skipped when the caches in
 artifacts/cache/{sysgen,MVP} are absent (fetched by OSE-002 / `make fetch`).
@@ -20,6 +21,7 @@ import io
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -181,6 +183,17 @@ class PatchedSysgen(unittest.TestCase):
         self.assertTrue(sentinel.exists(), "git_clone re-cloned instead of reusing the validated tree")
         self.assertEqual(git("rev-parse", "HEAD", cwd=staged).stdout.strip(), pin)
         self.assertEqual(check()[0], 0)
+
+    def test_T_PIN_009_keep_temp_required_for_post_run_check(self):
+        """Sysgen deletes temp/ (and so temp/RAKF) unless --keep-temp; the run step must require it."""
+        src = (self.tree / "sysgen.py").read_text(encoding="utf-8")
+        self.assertIn('"--keep-temp"', src)
+        m = re.search(r"if not self\.keeptemp:\s*\n(?:.*\n){0,2}?\s*shutil\.rmtree\(Path\(\"temp\"\)", src)
+        self.assertIsNotNone(m, "temp/ cleanup is no longer guarded by keeptemp; re-check MANIFEST step 3a")
+        manifest = (ROOT / "upstream/sysgen/MANIFEST.md").read_text(encoding="utf-8")
+        step = re.search(r"^3a\. .*$", manifest, re.M)
+        self.assertIsNotNone(step)
+        self.assertIn("--keep-temp", step.group(0))
 
     def test_T_PIN_005_update_manifest_skips_commit_pins(self):
         conf = self.work / "m.conf"
