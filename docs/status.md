@@ -27,7 +27,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | VERIFIED (merged to main) | economy, standard review | coordinator |
 | OSE-003 | Build host doctor and sysgen | BACKLOG (ADR-0003 accepted; needs OSE-013) | standard | — |
-| OSE-004 | CC/370 + MBT hello | host part IMPLEMENTED (branch `task/OSE-004-hello-harness`; `make build` RC 0, reproducible load module); guest part waits for OSE-003 | standard | — |
+| OSE-004 | CC/370 + MBT hello | REVIEW (host build changes requested: R04-1; guest gate pending) | standard | — |
 | OSE-005 | UFSD interface audit | READY | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG | high | — |
@@ -62,3 +62,7 @@ Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement i
 1. Human: decisions 1–3 above.
 2. Critical path: OSE-013 (host-verified pin enforcement), then OSE-003 (container build host, sysgen, and the end-to-end pin proof in test 7).
 3. In parallel, on disjoint files: OSE-005 (UFSD audit at v1.5.2), OSE-012 inventory (libc370 v2.25.1 = fcde4e88), OSE-011 source part, OSE-004 host part. The leads in research sysgen-pins P-6 and P-8 are context for 004, 005 and 007.
+
+## Independent review — 2026-11-26
+
+OSE-004: changes requested for container Git discovery in worktrees (R04-1). Exported-tree rebuild succeeds and reproduces all four recorded hashes. Guest deployment/execution acceptance stays open. See task card for commands and evidence.
