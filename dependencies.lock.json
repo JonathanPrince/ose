@@ -826,13 +826,19 @@
       "component": "mvp",
       "issue": "Pin recorded but not enforced: sysgen clones MVP from its default branch (sysgen.py l.2734) and runs pull --ff-only on an existing clone (l.3247).",
       "owner": "OSE-013",
-      "blocks": "OSE-003 (OSE-002 gate amended 2026-11-26: recording only)"
+      "blocks": "OSE-003 (OSE-002 gate amended 2026-11-26: recording only)",
+      "status": "host-verified",
+      "host_tests": "T-PIN-001..009 (tests/host/test_pins.py), 2026-11-26, OSE-013; validate-before-consumption order in upstream/sysgen/MANIFEST.md steps 2-3",
+      "remaining": "OSE-003 acceptance test 7: real sysgen run shows the pinned SHA; then remove this entry"
     },
     {
       "component": "rakf",
       "issue": "Pinned by tag v2.1.0, not SHA; a moved tag would go unnoticed.",
       "owner": "OSE-013",
-      "blocks": "OSE-003 reproducibility claim"
+      "blocks": "OSE-003 reproducibility claim",
+      "status": "host-verified",
+      "host_tests": "T-PIN-001..009 (tests/host/test_pins.py), 2026-11-26, OSE-013; validate-before-consumption order in upstream/sysgen/MANIFEST.md steps 2-3",
+      "remaining": "OSE-003 acceptance test 7: real sysgen run shows the pinned SHA; then remove this entry"
     }
   ]
 }
