@@ -8,6 +8,8 @@ Test IDs (cited from dependencies.lock.json pending_enforcement):
   T-PIN-005  patched update_manifest leaves commit-pinned entries alone
   T-PIN-006  pins.py check-clone: pass on the pin, fail (naming it) off the pin
   T-PIN-007  pins.py check-mvp-packages: LF clone passes, autocrlf=true clone fails
+  T-PIN-008  validate-before-consumption: a corrupt pre-staged MVP tree is rejected;
+             a valid one passes and the patched git_clone reuses it unchanged
 
 Tests needing the pinned upstream sources are skipped when the caches in
 artifacts/cache/{sysgen,MVP} are absent (fetched by OSE-002 / `make fetch`).
@@ -147,6 +149,38 @@ class PatchedSysgen(unittest.TestCase):
         self.clone()  # leave a clone, then the existing-clone path must refuse too
         with self.assertRaises(Exception):
             self.clone(commit="1" * 40)
+
+    @unittest.skipUnless(MVP_CACHE.is_dir(), "needs artifacts/cache/MVP")
+    def test_T_PIN_008_validate_before_consumption(self):
+        """Pre-staged MVP clone is validated before sysgen; sysgen then reuses it as is."""
+        pin = component("mvp")["commit"]
+        staged = self.work / "MVSCE" / "MVP"       # where step 9 clones MVP (out_folder="MVSCE")
+        staged.parent.mkdir()
+        lf_checkout(MVP_CACHE, pin, staged)
+
+        def check():
+            err = io.StringIO()
+            with mock.patch("sys.stderr", err), mock.patch("sys.stdout", io.StringIO()):
+                rc = pins.main(["pins.py", "--lock", str(LOCK), "check-mvp-packages", str(staged)])
+            return rc, err.getvalue()
+
+        # 1. A corrupted package is rejected before sysgen would consume it.
+        pkg = staged / "packages" / "NJE38"
+        good = pkg.read_bytes()
+        pkg.write_bytes(good + b"\n")
+        rc, err = check()
+        self.assertEqual(rc, 1)
+        self.assertIn("mvp-pkg NJE38", err)
+        pkg.write_bytes(good)
+
+        # 2. The valid tree passes, and the patched step-9 clone reuses it.
+        self.assertEqual(check()[0], 0)
+        sentinel = staged / ".git" / "ose-prestaged"
+        sentinel.write_text("1")
+        self.sg.sysgen.git_clone(self.obj, MVP_CACHE.as_posix(), out_folder="MVSCE", commit=pin)
+        self.assertTrue(sentinel.exists(), "git_clone re-cloned instead of reusing the validated tree")
+        self.assertEqual(git("rev-parse", "HEAD", cwd=staged).stdout.strip(), pin)
+        self.assertEqual(check()[0], 0)
 
     def test_T_PIN_005_update_manifest_skips_commit_pins(self):
         conf = self.work / "m.conf"

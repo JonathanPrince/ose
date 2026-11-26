@@ -1,5 +1,5 @@
 # OSE-013 — Enforce the MVP and RAKF pins in the Sysgen build
-Status: IMPLEMENTED (host-verified; awaiting independent standard-tier review)
+Status: IMPLEMENTED (review round 1: changes requested 2026-11-26; rework done, awaiting re-review)
 Milestone: M0
 Dependencies: OSE-002 (pins recorded in `dependencies.lock.json`)
 Owner: coordinator session (2026-11-26)
@@ -42,7 +42,7 @@ The patch needs more than a minimal change to sysgen → stop and propose an alt
   - `upstream/sysgen/patches/0001-pin-mvp-and-rakf-commits.patch`: P-01, 40 changed lines in `mvslovers.conf`, `mvslovers.py` and `sysgen.py`.
   - `upstream/sysgen/MANIFEST.md`: patch table plus the OSE-003 interface.
   - `scripts/lib/pins.py`: `check-clone` and `check-mvp-packages`.
-  - `tests/host/test_pins.py`: T-PIN-001…007.
+  - `tests/host/test_pins.py`: T-PIN-001…008 (008 added in review rework).
   - `dependencies.lock.json`: `pending_enforcement` set to `status: host-verified`, with the test IDs and the remaining OSE-003 step.
   - Removed the empty skeleton directory `upstream/patches/` (patches live per component under `upstream/<component>/patches/`, as `upstream/README.md` says).
   - This card, `docs/status.md`, `tasks/usage.jsonl`.
@@ -78,3 +78,9 @@ The patch needs more than a minimal change to sysgen → stop and propose an alt
 - Next action: independent standard-tier review (rerun the host tests with the caches present, read the patch). Then OSE-003 uses the interface and closes the lock entries in its test 7.
 - Usage/cost: not available to the agent.
 ## Independent review and gate result
+
+### Review round 1 (2026-11-26, relayed by the human): changes requested
+- **P2, validation after consumption:** accepted. The handoff sequence ran sysgen and checked the package hashes afterwards, but step 9 clones MVP and installs it in one go, so corrupted bytes could be installed before they were rejected. Rework:
+  - `upstream/sysgen/MANIFEST.md` interface steps 2–3b now pre-stage the RAKF and MVP clones at their pins (LF-safe, at the paths sysgen uses) and validate them with `pins.py` **before** sysgen starts. The patched `git_clone` reuses the validated tree; a post-run check stays as evidence only.
+  - New host test **T-PIN-008**: a corrupted pre-staged package is rejected; a valid tree passes, is reused unchanged by the patched `git_clone` (no re-clone, `HEAD` at the pin), and passes again afterwards. `python -m unittest tests.host.test_pins`: 8 tests, RC 0.
+  - Lock `pending_enforcement` now cites T-PIN-001..008. The patch itself is unchanged (still 40 lines, T-PIN-001).

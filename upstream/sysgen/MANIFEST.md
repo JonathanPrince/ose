@@ -23,16 +23,26 @@ The OSE-003 wrapper must, in this order:
    git -C sysgen apply        ../upstream/sysgen/patches/0001-pin-mvp-and-rakf-commits.patch
    ```
    Any nonzero RC stops the build.
-2. **Run sysgen.** P-01 itself makes steps 8 and 9 fail with `… is at <sha> but mvslovers.conf pins commit <sha>` if RAKF or MVP is not at the pinned commit.
-3. **Check after the clones** (belt and braces, and evidence for OSE-003 test 7):
+2. **Pre-stage RAKF and MVP at their pins, line-ending-safe, where sysgen clones them.** (Revised after review round 1: validation must come **before** consumption. Sysgen clones MVP and installs its packages within the same step 9, so a check after sysgen would only see bytes that were already used.)
    ```sh
-   python3 scripts/lib/pins.py check-clone rakf  <sysgen>/temp/RAKF
-   python3 scripts/lib/pins.py check-clone mvp   <sysgen>/MVSCE/MVP
+   git -c core.autocrlf=false clone --no-checkout https://github.com/mvslovers/RAKF   <sysgen>/temp/RAKF
+   git -C <sysgen>/temp/RAKF config core.autocrlf false
+   git -C <sysgen>/temp/RAKF checkout --detach 941b07dc19adb7a1a153caaeba96b659ff2ad3e0
+   git -c core.autocrlf=false clone --no-checkout https://github.com/MVS-sysgen/MVP   <sysgen>/MVSCE/MVP
+   git -C <sysgen>/MVSCE/MVP config core.autocrlf false
+   git -C <sysgen>/MVSCE/MVP checkout --detach 4c004a599f6a49442fade63cdb3cc3a9e0fdf58a
+   ```
+   The paths follow from `git_clone(out_folder=…)`: RAKF uses the default `temp/`, and MVP uses `MVSCE/`. Sysgen deletes `temp/` only at the very end of a run (`sysgen.py` l.3083-3085 at the pin), so the pre-staged trees survive until they are used. OSE-003 must confirm the paths in a real run.
+3. **Validate before sysgen starts.** Any nonzero RC stops the build, and sysgen is not run:
+   ```sh
+   python3 scripts/lib/pins.py check-clone rakf <sysgen>/temp/RAKF
+   python3 scripts/lib/pins.py check-clone mvp  <sysgen>/MVSCE/MVP
    python3 scripts/lib/pins.py check-mvp-packages <sysgen>/MVSCE/MVP
    ```
    Exit codes: `0` everything matches the lock; `1` mismatch (each one is named on stderr as `PIN MISMATCH …`); `2` usage error or missing lock, component or path. Option: `--lock PATH`.
-
-   The clone locations follow from `git_clone(out_folder=…)`: RAKF goes to `temp/RAKF` (default out_folder) and MVP to `MVSCE/MVP`. OSE-003 must confirm these paths in a real run.
+3a. **Run sysgen.** With P-01, steps 8 and 9 find the validated clones and take the existing-clone path. They `fetch`, then `checkout --force --detach <pin>` (a no-op on a clean tree at the pin), then verify `HEAD` and fail with `… is at <sha> but mvslovers.conf pins commit <sha>` on any difference. The tree is reused, not re-cloned. Host test **T-PIN-008** shows both halves: a corrupted pre-staged package is rejected by step 3, and a valid tree passes, is reused unchanged by the patched `git_clone`, and still passes afterwards.
+3b. **After sysgen (evidence only, for OSE-003 test 7):** re-run the three step-3 commands and keep their output. A failure here means something changed the tree during the run. Treat the build as invalid; this does not replace step 3.
+   - Residual risk: between step 3 and the step 9 install, the only writer is sysgen's own forced checkout. That uses the clone's local `core.autocrlf=false`, which a global setting cannot override. A repository `.gitattributes` would apply both when hashing and at checkout. Step 3b detects any change, but only after the fact.
 4. **Hazards found while testing:**
    - `sysgen.py` calls `main()` at module level (l.3575, no `__main__` guard). **Never import it**, not even in tests; `tests/host/test_pins.py` lifts single methods out with `ast`.
    - On Windows Python, `which git` returns an MSYS path that cannot be executed. Sysgen supports Linux only (ADR-0003); the host tests work around this.
