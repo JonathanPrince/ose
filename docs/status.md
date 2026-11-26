@@ -28,7 +28,7 @@ Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | VERIFIED (merged to main) | economy, standard review | coordinator |
 | OSE-003 | Build host doctor and sysgen | BACKLOG (ADR-0003 accepted; needs OSE-013) | standard | — |
 | OSE-004 | CC/370 + MBT hello | READY (host part) | standard | — |
-| OSE-005 | UFSD interface audit | READY | standard → high | — |
+| OSE-005 | UFSD interface audit | IMPLEMENTED (branch `task/OSE-005-ufsd-audit`; awaiting high-tier review) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG | high | — |
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
@@ -49,6 +49,7 @@ Resolved 2026-11-26: the OSE-002 gate was amended (recording only; enforcement i
 3. **ADR "Deciders" lines** in 0001, 0002, 0004 and 0005 still say "(pending)" although their Status is Accepted. Only the human should edit them.
 
 ## Risks (hypotheses until audited)
+- OSE-005 (unreviewed): UFSD takes the session identity from client-supplied data (`SETUSER`), verifies nothing, and requires every client to be APF-authorized; sessions are not bound to an ASID. See research 2026-11-26-ufsd-audit U-1, U-3, U-5. Owner: OSE-007.
 - The mvslovers servers run authorized via RAKF SVC 244 (recon R-04). Who else can obtain authorization this way is unknown. Owner: OSE-007.
 - The default RAKF profile `DATASET * READ` may let any user read UFS backing data sets directly (recon R-06). Owner: OSE-007.
 - FTPD, HTTPD and mvsMF are installed (not started) and are alternate paths to UFS data. Owner: OSE-007.

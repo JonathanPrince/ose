@@ -1,15 +1,15 @@
 # OSE-005 — UFSD source and interface audit
-Status: READY (OSE-002 VERIFIED 2026-11-26; pin is UFSD v1.5.2 = 1a63bf52)
+Status: IMPLEMENTED (2026-11-26; awaiting independent high-tier review)
 Milestone: M0
 Dependencies: OSE-002
-Owner:
+Owner: author model (standard tier; identity questions read at high tier)
 Risk: high (findings feed the security design)
 Model tier: standard; escalate ambiguous ABI or identity questions to high
 Reviewer tier: high
 Budget: local-only
 Branch: task/OSE-005-ufsd-audit
 Guest resources: none (source reading only)
-Baseline commit:
+Baseline commit: 5970f87 (main)
 
 ## Goal and non-goals
 Goal: document what UFSD **actually** does at the pinned commit (UFSD 1.5.2 as installed by Sysgen), with file:line citations, so OSE can decide whether to reuse it, extend it or wrap it with an adapter (spec §5 decision gate).
@@ -37,11 +37,17 @@ The reviewer checks every item below against the cited lines at the pinned SHA:
 Cannot determine how identity is established → hand that sub-question to OSE-007 (high tier) with what was found. Undocumented authorized code paths → flag for OSE-007.
 
 ## Handoff
-- Changed files / commits:
+- Changed files / commits: `docs/research/2026-11-26-ufsd-audit.md` (new), `docs/interfaces/ufsd-observed.md` (new), `docs/interfaces/README.md` and `docs/research/README.md` (index rows), `docs/status.md`, `tasks/usage.jsonl`, this card. Branch `task/OSE-005-ufsd-audit`.
 - Commands run, RC, evidence paths:
-- Tests not run and why:
-- Decisions / ADRs:
+  - `git -c core.autocrlf=false clone https://github.com/mvslovers/ufsd.git artifacts/cache/ufsd`, then `git checkout 1a63bf52fe51a276757b9062aa4072cb17a62762`. RC 0; `rev-parse HEAD` = the pin.
+  - libc370 read at `fcde4e88` (existing OSE-012 cache) for `iefssreq.c` and `@@super.c`.
+  - Static reading with `sed`/`grep`. Every cited line range was re-checked against the source after writing, and four wrong citations were corrected.
+  - `python scripts/check_repo.py`: RC 0.
+- Tests not run and why: no guest exists yet (OSE-003). All rows marked **hypothesis** (U-2.7, 3.7, 5.6, 5.7, 6.4, 7.5, 7.9, 7.10) need OSE-006 guest tests. Struct offsets in `ufsd-observed.md` are computed, not dumped.
+- Decisions / ADRs: none taken. Recommendation for the spec §5 gate (audit summary): reuse the UFSD storage engine and STC, but put a trusted OSE broker in front of it; untrusted code must never be a direct UFSD client. The decision belongs to OSE-010 and the human.
 - Known defects / blockers:
-- Next action:
-- Usage/cost if available:
+  - Identity is client-asserted (U-3) and every client must be APF-authorized (U-1.4). **Escalated to OSE-007** per this card's trigger, with G-1, G-2, G-11 and G-12.
+  - Upstream defects found (unmount with open handles U-7.5, orphaned requests after a client cancel U-5.7, concept.md vs code on ACEE capture U-3.5). Reporting them upstream needs human approval.
+- Next action: independent high-tier review. A reviewer should re-derive at least U-1.4, U-2.3, U-3.1–3.3, U-4 (table), U-5.2, U-5.5 and U-7.5 from the cited lines. Then OSE-007 takes the escalation and OSE-006 the hypotheses.
+- Usage/cost if available: not metered (null in `tasks/usage.jsonl`).
 ## Independent review and gate result
