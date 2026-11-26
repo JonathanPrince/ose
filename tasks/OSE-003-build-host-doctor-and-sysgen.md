@@ -1,15 +1,15 @@
 # OSE-003 — Build host doctor and Sysgen wrapper; native TSO/JES smoke
-Status: READY (2026-11-26: ADR-0003 accepted, option A; OSE-013 VERIFIED and merged. Follow upstream/sysgen/MANIFEST.md steps 1-3b, including sysgen --keep-temp)
+Status: CLAIMED (2026-11-26, coordinator session; guest lease held, see docs/status.md)
 Milestone: M0
 Dependencies: OSE-002; OSE-013 (added in the OSE-002 rework); ADR-0003 (accepted). Clone all caches with `core.autocrlf=false` (research sysgen-pins P-9)
-Owner:
+Owner: coordinator session (standard tier)
 Risk: medium
 Model tier: standard
 Reviewer tier: standard
 Budget: local-only
 Branch: task/OSE-003-build-host-sysgen
 Guest resources: lease required (creates the first DASD set)
-Baseline commit:
+Baseline commit: 0ba236c (main)
 
 ## Goal and non-goals
 Goal: build MVS/CE from a clean checkout with the pinned Sysgen and Hercules, as a non-root user, on the build host chosen in ADR-0003. IPL it twice and prove that native JES2 and TSO work, with every check parsed automatically.
