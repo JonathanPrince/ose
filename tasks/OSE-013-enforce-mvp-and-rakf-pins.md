@@ -1,5 +1,5 @@
 # OSE-013 — Enforce the MVP and RAKF pins in the Sysgen build
-Status: REVIEW (round 2: changes requested, R13-2 fixed by the author 2026-11-26; awaiting round-3 check)
+Status: VERIFIED (host-enforcement scope; independent re-review 2026-11-26)
 Milestone: M0
 Dependencies: OSE-002 (pins recorded in `dependencies.lock.json`)
 Owner: coordinator session (2026-11-26)
@@ -104,3 +104,11 @@ Reviewer: Codex, standard tier, independent of author. Reviewed `3aa77c6` agains
 - New host test **T-PIN-009**: the patched sysgen still defines `--keep-temp` and still guards `rmtree(Path("temp"))` with `if not self.keeptemp`, and MANIFEST step 3a names the flag. `python -m unittest tests.host.test_pins`: 9 tests, RC 0.
 - The lock's `pending_enforcement` now cites T-PIN-001..009. The patch is unchanged.
 - The OSE-003 card is outside this card's file scope, so OSE-003 must follow MANIFEST steps 2–3b, including `--keep-temp`, for its test 7.
+
+### Independent re-review — 2026-11-26
+
+Reviewer: Codex, high tier (escalated re-review following prior changes request), independent of author. Reviewed `fa6d26b` on `review/OSE-013-r3`.
+
+Accepted. R13-1 and R13-2 resolved. MANIFEST now stages/validates before consumption and requires --keep-temp; pinned Sysgen cleanup deletes temp only when keeptemp is false. pending_enforcement entries remain host-verified with T-PIN-001..009 and retain OSE-003 test 7 as the end-to-end gate. Ran all nine pin tests using the unchanged module with only cache constants redirected to the shared caches: `python -I artifacts/review/OSE-013-r3/artifacts/review_pins.py` (main workspace, approved escalation for temporary local Git repositories): RC 0, 9 passed, 33.208 s. The runner is retained at that ignored path. Ordinary discovery in this worktree skipped those nine tests because caches are outside it; the separate run is the evidence. No real Sysgen or guest run was performed.
+
+Validation in this worktree: `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 repository tests passed. No guest mutation, dependency change, merge or release. Human owns integration; this review does not alter other task branches.
