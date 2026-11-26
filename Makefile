@@ -1,9 +1,9 @@
 # OSE stable command surface (spec section 4). Targets exit nonzero on failure.
-# M0: only `check` and `test-host` are implemented; others name their owning task.
+# Implemented: check, test-host, build (OSE-004), doctor, fetch, sysgen, smoke (OSE-003).
+# The rest name their owning task.
 PYTHON ?= python3
 
-# build: OSE-004; exits 3 while maclib370 is unapproved (scripts/build.sh).
-.PHONY: check test-host doctor fetch build sysgen deploy test-guest test-security package restore
+.PHONY: check test-host doctor fetch build sysgen smoke deploy test-guest test-security package restore
 
 check:
 	$(PYTHON) scripts/check_repo.py
@@ -15,11 +15,22 @@ define notyet
 	@echo "make $@: not implemented yet (owner: $(1)); see docs/status.md" >&2; exit 2
 endef
 
-doctor:        ; $(call notyet,OSE-003)
-fetch:         ; $(call notyet,OSE-002/OSE-003)
+doctor:
+	sh scripts/doctor.sh
+
+# pinned sources and the Hercules build-host image (ADR-0003 option A)
+fetch:
+	sh scripts/host/hercules-image.sh
+
 build:
 	sh scripts/build.sh all
-sysgen:        ; $(call notyet,OSE-003)
+sysgen:
+	sh scripts/sysgen.sh run
+
+# two cold IPLs, JES2 and TSO smoke (OSE-003 tests 3-5)
+smoke:
+	sh scripts/smoke.sh all
+
 deploy:        ; $(call notyet,OSE-004)
 test-guest:    ; $(call notyet,OSE-006/OSE-009)
 test-security: ; $(call notyet,OSE-007 (plan only in M0))
