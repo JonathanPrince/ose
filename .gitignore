@@ -1,0 +1,10 @@
+# Logs, dumps, DASD images, caches (spec section 4) - never committed
+artifacts/
+*.dasd
+*.cckd
+*.cckd64
+*.log
+__pycache__/
+*.pyc
+.env
+.env.*

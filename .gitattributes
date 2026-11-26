@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.jcl text eol=lf
+*.asm text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+tests/fixtures/** binary
+*.xmi binary
+*.aws binary
+*.het binary

@@ -1,0 +1,12 @@
+# Thin wrapper: the authoritative checks run locally with `make check test-host`.
+name: check
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/check_repo.py
+      - run: python3 -m unittest discover -s tests/host -v
