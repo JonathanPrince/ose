@@ -43,7 +43,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | IMPLEMENTED (guest listing: no collision; R11-G1 evidence gate fixed 2026-11-27; awaiting re-review) | economy → standard | coordinator |
+| OSE-011 | TSO terminal and name audit | REVIEW (665604f closes R11G-1; R11G-2 test cleanup breaks Git fixtures on Windows) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 
@@ -117,3 +117,7 @@ Reviewed 9a57b02 on `review/OSE-004-guest-r1`: changes requested R04G-1 (RECV/CL
 ## OSE-011 independent guest review — 2026-11-27
 
 Reviewed 6880303 on `review/OSE-011-guest-r1`: positive guest acceptance independently reproduced (32 libraries, 3825 distinct names, no candidate collision; live configuration coverage, catalog and static subsystem table checked). One P2 finding R11G-1: unparsed member lines or missing subsystem dump still yield driver RC0/ok=true; deterministic altered-spool replays retained. Changes requested, source portion remains accepted. Host suite RC0: 69 passed/9 skipped; repo check RC0; author manifest 20/20 verified. See card for exact commands and limits. Lease released; all containers stopped; reviewer volume `ose-review-011-20261127` retained stopped. No merge or push.
+
+## OSE-011 focused re-review — 2026-11-27
+
+665604f closes R11G-1: independent intact guest-spool replay passes; four damaged evidence variants fail correctly. New P2 R11G-2: MainReplay's whole-environment clear/restore removes an inherited empty Git config variable from native Windows inheritance; clean git init RC0 before replay tests, RC128 after. Full host suite: 69 passed, 11 errors, 9 skipped (RC1). Changes requested, not VERIFIED. Author rework hashes 5/5 verified. No new guest run/lease or implementation changes; prior independent guest listing remains valid. See card/evidence on `review/OSE-011-guest-r2`. No merge/push.

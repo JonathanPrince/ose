@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: IMPLEMENTED (source part accepted; guest listing done 2026-11-27; R11-G1 fixed 2026-11-27; awaiting re-review)
+Status: REVIEW (665604f closes R11G-1; new P2 R11G-2 test environment corruption blocks full host suite)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -134,3 +134,23 @@ Baseline: review/OSE-011-guest-r1 at 1486848 (fast-forwarded). Lease on `ose-gue
 | `python -I scripts/check_repo.py`; `python -m unittest discover -s tests/host` | 0, 0 | |
 
 Next action: re-review of R11-G1; then the human decides on the merge.
+
+### Independent focused guest re-review — 2026-11-27
+
+Reviewer: Codex, high tier (escalated after failed guest review), independent of author. Reviewed `665604f` against `1486848` on `review/OSE-011-guest-r2`, separate worktree `artifacts/review/OSE-011-guest-r2`. **R11G-1 closed; changes requested for new R11G-2.** No new guest run/lease, implementation edit, merge or push. The existing independent positive guest listing remains accepted.
+
+**R11G-1 closed:** main() now uses the analysis gate, rejecting unparsed members, missing/unterminated subsystem evidence, unexpected LISTDS errors and missing catalog outcomes. Re-ran the previous independent reproduction against the actual saved guest spool: intact baseline returns RC0/ok=true; unparsed-member and absent-subsystem variants now each return RC1/ok=false. Additional independent main-path replay variants with a removed subsystem terminator and a missing catalog result also return RC1. These use mocked orchestration with recorded guest data, not new emulator runs. The five author rework evidence files match their manifest (`ebbcc8244cd8f2e9f68ff7ecaa69334c8dcd13280b30cd106cd39c0a7160dc3b`).
+
+**R11G-2 [P2], `tests/host/test_audit_listing.py:240–241`: replay cleanup corrupts inherited environment on the supported Windows host.** `os.environ.clear()` followed by `update(env)` rewrites unrelated environment entries. In this host environment `GIT_CONFIG_VALUE_0` is present with an empty value; after the new MainReplay tests, Python's mapping still shows it, but native child-process inheritance loses it. A clean `git init` returns RC0 before those tests and RC128 afterward (`error: missing config value GIT_CONFIG_VALUE_0`, `fatal: unable to parse command-line config`). As a result, the full host suite has 11 errors in unchanged ResumeAdmission fixtures. Save and restore only the GUEST_USER/GUEST_PASS keys this helper changes; leave unrelated native environment entries alone, and rerun the full host suite in this Windows environment. This affects test isolation, not the corrected guest evidence gate.
+
+| Command/check | RC | Result / evidence (relative to this worktree) |
+|---|---|---|
+| `OSE_BASH=C:/Program Files/Git/bin/bash.exe python -I -m unittest discover -s tests/host -v` | 1 | 89 total: 69 passed, 11 errors, 9 skipped (source caches absent). All 11 errors occur in ResumeAdmission at `git init` after new replay tests; `artifacts/evidence/review-ose-011-r2/host-tests.txt` and `.rc` |
+| `python artifacts/evidence/review-ose-011-r2/replay-independent.py` | 0 | assertions pass: intact independent guest spool -> driver RC0, four damaged variants -> driver RC1; result JSON/console retained |
+| `python artifacts/evidence/review-ose-011-r2/environment-repro.py` | 0 | reproduction assertions pass: three new MainReplay tests pass individually; same-process git init before RC0, after RC128; `environment-repro.json` |
+| Python SHA-256 check of author rework manifest | 0 | 5/5 files match; `author-manifest.json` |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | structure/doc checks pass |
+
+The environment reproduction explicitly adds the repository to sys.path; an initial scratch invocation omitted that import path and did not run the tests, so it was corrected before drawing the conclusion above. Existing independent guest evidence was copied byte-for-byte with SHA-256 assertions before replay. The new code is data-analysis/test-only; JCL, shared runner, pinning and deployment are unchanged, so no new guest mutation was needed. Terminal runtime probes and macro-manual work remain outside this focused review. Next action: fix R11G-2 and rerun the complete host suite; then focused re-review. Do not mark VERIFIED yet.
+
+Re-review evidence manifest: `artifacts/evidence/review-ose-011-r2/REVIEW-SHA256SUMS`, 25 files; SHA-256 `7ffffd426d18aa62c6cd79d5492931325a002cafb3b279a8fd3da80d7d4d721a`.
