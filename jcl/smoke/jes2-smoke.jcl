@@ -1,0 +1,16 @@
+//OSESMOKE JOB (OSE),'OSE-003 SMOKE',CLASS=A,MSGCLASS=A,
+//             MSGLEVEL=(1,1),USER=&USER,PASSWORD=&PASS
+//*--------------------------------------------------------------------
+//* OSE-003 TEST 4: JES2 SMOKE JOB.  USER= AND PASSWORD= ARE FILLED IN
+//* AT SUBMIT TIME BY SCRIPTS/LIB/MVS-SMOKE.PY; NEVER STORE THEM HERE.
+//* EXPECTED STEP RCS (PARSED FROM THE JES2 PRINTER OUTPUT, IEF142I):
+//*   BR14   0000   IEFBR14
+//*   PLANT  0004   IDCAMS SET MAXCC = 4 (A PLANTED NONZERO RC)
+//*--------------------------------------------------------------------
+//BR14     EXEC PGM=IEFBR14
+//PLANT    EXEC PGM=IDCAMS
+//SYSPRINT DD  SYSOUT=*
+//SYSIN    DD  *
+  SET MAXCC = 4
+/*
+//

@@ -2,7 +2,7 @@
 
 Updated: 2026-11-26 by the coordinator (OSE-004, 005, 011, 012 and 013 merged to main on the human maintainer's instruction)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
-Guest lease: none held. No guest image exists yet. See tasks/README.md "Guest resources".
+Guest lease: none held (released by the OSE-003 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (primary), ose-sysgen-2, ose-sysgen-3 (fresh rework build), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -14,17 +14,17 @@ Merged to main after independent review (2026-11-26):
 - **OSE-011:** terminal audit, source part. The guest listing is still open.
 - **OSE-004:** CC/370 toolchain and a reproducible hello load module, host part. Guest acceptance tests 2–4 are still open.
 
-**No guest exists yet.** Everything observed so far is host-side: repository checks, the pin tests, and the CC/370 compile and link inside the container. `src/` holds only the OSE-004 test program `src/utils/hello/hello.c`.
+**Guest images now exist.** OSE-003 implementation and an independent clean-build/IPL/JES/TSO repeat have passed their positive checks; the harness has five open review findings. `src/` holds only the OSE-004 test program `src/utils/hello/hello.c`.
 
 ## M0 gate (spec §5) → owning tasks
 
 | Gate criterion | Tasks | Evidence | State |
 |---|---|---|---|
-| Clean pinned Sysgen build boots twice | 002, 013, 003 | `upstream/sysgen/MANIFEST.md` (P-01 patch, validate-before-consumption interface); T-PIN-001..009 | not started (enforcement host-verified; OSE-003 owns the run and test 7) |
-| Native TSO/JES smoke tests | 003 | | not started |
+| Clean pinned Sysgen build boots twice | 002, 013, 003 | OSE-003 independent repeat: build RC 0, 3181 s, two IPLs 7/9 s, pin receipts | observed; harness changes requested R03-1..R03-5 |
+| Native TSO/JES smoke tests | 003 | independent raw spool BR14=0000, PLANT=0004; MVSCE02 TIME/logoff pass | observed; failure-path harness findings open |
 | Compile/deploy hello | 004 | `make build` RC 0; HELLO load module and XMIT reproducible (research 2026-11-26-toolchain T-7; runbook hello-compile-deploy) | host part accepted and merged; deploy and guest runs not started |
 | UFSD read/write across two guest clients | 005, 006 | research 2026-11-26-ufsd-audit (source only) | source audit VERIFIED; guest tests not started |
-| Dependency/license inventory | 002, 004 | dependencies.lock.json (39 components incl. maclib370, 2 excluded, 2 pending_enforcement now host-verified by OSE-013); research 2026-11-26-sysgen-pins, -licensing | VERIFIED 2026-11-26 (end-to-end pin proof: OSE-003 test 7) |
+| Dependency/license inventory | 002, 004 | dependencies.lock.json (39 components, 2 excluded, pending_enforcement empty); real pin receipts from author and independent OSE-003 builds | guest component pin proof observed; s3270 pin and build-host ADR reconciliation requested |
 | Actual interfaces documented | 005, 007, 008, 011, 012 | docs/interfaces/ufsd-observed.md; research -ufsd-audit, -libc370-inventory, -tso-terminal-audit | partial (005, 011 source part, 012 done; 007, 008 not started) |
 | Recovery documented | 009 | | not started |
 | Spec §10 questions answered (versions, build host, terminal APIs, C subset, RAKF baseline, macros, UFSD identity) | 002, 003, 011, 012, 007, 008, 005 | versions and RAKF baseline (OSE-002); build host (ADR-0003); terminal APIs (OSE-011); C subset (OSE-012); UFSD identity: client-asserted, not verified (OSE-005 U-3) | partial (RAKF and SSI identity: OSE-007) |
@@ -35,7 +35,7 @@ Merged to main after independent review (2026-11-26):
 |---|---|---|---|---|
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
-| OSE-003 | Build host doctor and sysgen | READY (OSE-013 VERIFIED and merged; follow MANIFEST steps 2–3b incl. `--keep-temp`) | standard | — |
+| OSE-003 | Build host doctor and sysgen | VERIFIED (85414c2, all findings closed; ADR-0006 accepted; awaiting human merge) | standard | coordinator |
 | OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 pending OSE-003 | standard | — |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
@@ -74,7 +74,7 @@ Resolved 2026-11-26:
 - The toolchain macros (maclib370) come from TK5, not MVS/CE. Whether libc370 built against them runs correctly on MVS/CE needs a guest run (OSE-004 T-1).
 
 ## Next actions
-1. **Critical path: OSE-003.** Container build host, a pinned sysgen run following `upstream/sysgen/MANIFEST.md` steps 1–3b (including `--keep-temp`), IPL twice, and test 7, which removes the `pending_enforcement` entries. It needs a guest lease (OSE-009 defines the procedure).
+1. **Critical path: OSE-003 rework.** Independent test 6 passed, but R03-1..R03-5 need fixes and re-review. The reviewed branch has completed the real pin proof and removed pending_enforcement; align the dependency decision and pin s3270 before merge.
 2. After OSE-003: the OSE-011 guest listing, the OSE-004 guest acceptance tests 2–4, and the OSE-006 UFSD guest tests.
 3. In parallel, at high tier: OSE-007, starting from the OSE-005 escalations, and OSE-008.
 
@@ -89,3 +89,15 @@ OSE-011: REVIEW (source part accepted; guest collision listing remains open). Se
 ## OSE-004 independent re-review — 2026-11-26
 
 Host portion accepted at 0d13ac2: R04-1 closed by independent complete worktree build (RC 0), all five artifact hashes match and 11 host tests pass. Task remains REVIEW until guest acceptance 2-4. See the task card for evidence; human owns integration.
+
+## OSE-003 independent review — 2026-11-27
+
+Test 6 completed: fresh worktree/new volume; fetch/doctor/build/smoke RC 0; Hercules 293/293; Sysgen attempt 1 in 3181 s; cold IPLs 7 and 9 s; raw JES2 RCs 0000/0004; non-admin TIME/logoff; both shutdowns clean. Changes requested R03-1..R03-5 (resume source pin, doctor status, shutdown evidence, stale smoke handshake, s3270 pin). See task card and ignored review evidence. Lease released after containers exited; no author volume changed.
+
+## OSE-003 re-review — 2026-11-27
+
+Reviewed b5cbb7d: 44 host tests (35 pass, 9 skipped), healthy real-tree read-only admission and pins pass, doctor passes, two consecutive guest smoke cycles pass (four IPLs 9/9/8/9 s, JES2 0000/0004 and TSO twice, clean ordered shutdowns). Two additional missing/invalid expected-patch cases expose the remaining fail-open verifier (R03-1 P1): failed git apply is ignored and an unpatched tree is admitted. R03-2..5 technical fixes accepted. ADR-0006 is still proposed. Changes requested; lease released, author volumes untouched. See task card and review/OSE-003-r2 evidence.
+
+## OSE-003 focused re-review — 2026-11-27
+
+85414c2 VERIFIED: R03-1 fail-open path closed, independent missing/invalid patch cases now return 10, host suite 41 passed/9 skipped, and no new findings. R03-2..5 and runtime evidence remain accepted from prior reviews; ADR-0006 is recorded accepted by the human. No new guest run or lease. Human owns integration.

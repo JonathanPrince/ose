@@ -2,6 +2,7 @@
 Status: Accepted
 Date: 2026-11-26
 Deciders: human maintainer (pending)
+Superseded in part by: ADR-0006 (accepted 2026-11-27), which replaces "built with hercules-helper v0.9.9" in decision 2. The Hercules pin is unchanged.
 
 ## Context
 ADR-0004 §3 says OSE pins follow what pinned Sysgen installs. Sysgen@4746195d pins its mvslovers products by release and sha256 (`mvslovers.conf`), but does not pin:
