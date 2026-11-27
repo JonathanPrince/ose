@@ -48,31 +48,44 @@ fi
 # objects in a scratch store) must hash to the same tree as the pin with P-01
 # applied. Untracked build products (temp/, MVSCE/, logs) are not part of the
 # comparison; the RAKF and MVP clones among them are checked by step 3.
+#
+# Fail closed (R03-1 round 2): this function runs in a `|| exit 10` context,
+# where bash ignores `set -e`, so every command's status is checked explicitly
+# and any failure refuses the tree. The patch must exist, apply, and change the
+# tree; both trees must be well-formed object IDs.
+SCRATCH=
+b1_fail() { log "step 1b FAILED: $*"; [ -n "$SCRATCH" ] && rm -rf "$SCRATCH"; SCRATCH=; return 1; }
+b1_git() { # GIT_INDEX_FILE-name git-args...: git in $S with the scratch index and object store
+    local idx=$1; shift
+    GIT_OPTIONAL_LOCKS=0 GIT_INDEX_FILE="$SCRATCH/$idx" GIT_OBJECT_DIRECTORY="$SCRATCH/obj" \
+        GIT_ALTERNATE_OBJECT_DIRECTORIES="$S/.git/objects" git -C "$S" "$@"
+}
 verify_sysgen_tree() {
-    local head cur exp scratch
-    head=$(git -C "$S" rev-parse HEAD 2>/dev/null || echo none)
-    [ "$head" = "$SYSGEN_COMMIT" ] || { log "step 1b FAILED: sysgen HEAD $head is not the pin $SYSGEN_COMMIT"; return 1; }
-    scratch=$(mktemp -d)
-    mkdir -p "$scratch/obj"
-    (
-        export GIT_OPTIONAL_LOCKS=0 GIT_OBJECT_DIRECTORY="$scratch/obj" \
-               GIT_ALTERNATE_OBJECT_DIRECTORIES="$S/.git/objects"
-        cd "$S"
-        GIT_INDEX_FILE="$scratch/cur" git read-tree HEAD
-        GIT_INDEX_FILE="$scratch/cur" git add -u
-        GIT_INDEX_FILE="$scratch/cur" git write-tree > "$scratch/cur.tree"
-        GIT_INDEX_FILE="$scratch/exp" git read-tree "$SYSGEN_COMMIT"
-        GIT_INDEX_FILE="$scratch/exp" git apply --cached "$P01"
-        GIT_INDEX_FILE="$scratch/exp" git write-tree > "$scratch/exp.tree"
-    ) || { log "step 1b FAILED: could not compute the tree comparison"; rm -rf "$scratch"; return 1; }
-    cur=$(cat "$scratch/cur.tree"); exp=$(cat "$scratch/exp.tree")
+    local head cur exp pin_tree
+    head=$(git -C "$S" rev-parse --verify -q HEAD) || b1_fail "no HEAD in $S" || return 1
+    [ "$head" = "$SYSGEN_COMMIT" ] || b1_fail "sysgen HEAD $head is not the pin $SYSGEN_COMMIT" || return 1
+    [ -f "$P01" ] && [ -r "$P01" ] && [ -s "$P01" ] || b1_fail "patch P-01 missing, unreadable or empty: $P01" || return 1
+    SCRATCH=$(mktemp -d) && [ -d "$SCRATCH" ] || b1_fail "mktemp failed" || return 1
+    mkdir -p "$SCRATCH/obj" || b1_fail "cannot create scratch object store" || return 1
+
+    b1_git cur read-tree HEAD             || b1_fail "read-tree HEAD failed" || return 1
+    b1_git cur add -u                     || b1_fail "staging the tracked files failed" || return 1
+    cur=$(b1_git cur write-tree)          || b1_fail "write-tree (working files) failed" || return 1
+    b1_git exp read-tree "$SYSGEN_COMMIT" || b1_fail "read-tree $SYSGEN_COMMIT failed" || return 1
+    pin_tree=$(b1_git exp write-tree)     || b1_fail "write-tree (pin) failed" || return 1
+    b1_git exp apply --cached "$P01"      || b1_fail "P-01 does not apply to $SYSGEN_COMMIT: $P01" || return 1
+    exp=$(b1_git exp write-tree)          || b1_fail "write-tree (pin + P-01) failed" || return 1
+
+    for t in "$cur" "$exp" "$pin_tree"; do
+        printf '%s' "$t" | grep -Eqx '[0-9a-f]{40}([0-9a-f]{24})?' || b1_fail "malformed tree id '$t'" || return 1
+    done
+    [ "$exp" != "$pin_tree" ] || b1_fail "P-01 changes nothing: $P01" || return 1
     if [ "$cur" != "$exp" ]; then
         log "step 1b FAILED: tracked files are not $SYSGEN_COMMIT + P-01 (tree $cur, expected $exp); differing paths:"
-        GIT_OBJECT_DIRECTORY="$scratch/obj" GIT_ALTERNATE_OBJECT_DIRECTORIES="$S/.git/objects" \
-            git -C "$S" diff --stat "$exp" "$cur" | tee -a "$E/wrapper.log"
-        rm -rf "$scratch"; return 1
+        b1_git cur diff --stat "$exp" "$cur" | tee -a "$E/wrapper.log"
+        rm -rf "$SCRATCH"; SCRATCH=; return 1
     fi
-    rm -rf "$scratch"
+    rm -rf "$SCRATCH"; SCRATCH=
     log "step 1b ok: HEAD $head, tracked tree $cur = pin + P-01"
 }
 verify_sysgen_tree || exit 10

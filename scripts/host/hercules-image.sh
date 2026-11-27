@@ -17,7 +17,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 
 fetch hyperion https://github.com/SDL-Hercules-390/hyperion.git "$HERCULES_COMMIT"
 mkdir -p "$EVID"
-# ADR-0006 (proposed): all apt packages from one Debian snapshot; Regina pinned
+# ADR-0006: all apt packages from one Debian snapshot; Regina pinned
 # by version and .deb SHA-256 (upstream/debian/packages.lock.json).
 PY=${PYTHON:-$(command -v python3 2>/dev/null || command -v python)}
 APT_RUN=$("$PY" -I "$ROOT/scripts/lib/debpins.py" install-line hercules) || die "debpins: lock invalid"

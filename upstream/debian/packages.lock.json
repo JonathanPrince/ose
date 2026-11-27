@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "description": "Build-host Debian package inventory (ADR-0006, proposed). Every apt install in the OSE-003 images reads from this one immutable Debian snapshot. Packages that OSE drives directly are also pinned by version and .deb SHA-256, checked before install and re-checked by version on every use. Read by scripts/lib/debpins.py.",
+ "description": "Build-host Debian package inventory (ADR-0006). Every apt install in the OSE-003 images reads from this one immutable Debian snapshot. Packages that OSE drives directly are also pinned by version and .deb SHA-256, checked before install and re-checked by version on every use. Read by scripts/lib/debpins.py.",
  "base_image": "debian@sha256:e67eeead736ff7bbe258ef088bff683635c561b1fcfefad0806c1df4ab49ce0e",
  "snapshot": {
   "timestamp": "20261123T000000Z",

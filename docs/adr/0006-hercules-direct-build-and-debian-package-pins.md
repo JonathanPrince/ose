@@ -1,7 +1,7 @@
 # 0006 — Build Hercules directly at its pinned commit; pin build-host Debian packages
-Status: Proposed
+Status: Accepted
 Date: 2026-11-27
-Deciders: human maintainer (pending)
+Deciders: human maintainer (accepted 2026-11-27)
 Supersedes / superseded by: supersedes ADR-0005 decision 2 only in the words "built with hercules-helper v0.9.9". The Hercules pin itself (SDL Hyperion Release_4.9.1, `ee86c4de`) is unchanged. Origin: OSE-003 independent review 2026-11-27 (dependency note and finding R03-5).
 
 ## Context (with evidence links and confidence)

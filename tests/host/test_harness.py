@@ -294,6 +294,44 @@ class ResumeAdmission(unittest.TestCase):
         (self.repo / "sysgen.py").unlink()
         self.assert_refused("sysgen.py")
 
+    # R03-1 round 2: a patch that cannot be applied must refuse the tree, not
+    # silently compare against the unpatched pin (which an unpatched tree matches).
+    def unpatch(self):
+        self.git("checkout", "-q", "--", "mvslovers.conf")
+
+    def test_missing_patch_file_refuses_unpatched_tree(self):
+        self.unpatch()
+        self.patch.unlink()
+        self.assert_refused("missing, unreadable or empty")
+
+    def test_missing_patch_file_refuses_patched_tree(self):
+        self.patch.unlink()
+        self.assert_refused("missing, unreadable or empty")
+
+    def test_empty_patch_file_refuses_unpatched_tree(self):
+        self.unpatch()
+        self.patch.write_text("")
+        self.assert_refused("missing, unreadable or empty")
+
+    def test_invalid_patch_refuses_unpatched_tree(self):
+        self.unpatch()
+        self.patch.write_text("this is not a patch\n", newline="\n")
+        self.assert_refused("does not apply")
+
+    def test_non_applying_patch_refuses_unpatched_tree(self):
+        self.unpatch()
+        self.patch.write_text(self.patch.read_text().replace("-commit = main", "-commit = other"), newline="\n")
+        self.assert_refused("does not apply")
+
+    def test_git_failure_refuses(self):
+        # break the object store so git read-tree/add fail inside the verifier
+        (self.repo / ".git" / "objects").rename(self.tmp / "objects-moved")   # rmtree fails on Windows (read-only objects)
+        (self.repo / ".git" / "objects").mkdir()
+        rc, out = self.run_wrapper()
+        self.assertEqual(rc, 10, out)
+        self.assertIn("step 1b FAILED", out)
+        self.assertFalse((self.repo / "RAN").exists())
+
 
 # --- R03-5: Debian package pins ---------------------------------------------------
 class DebPins(unittest.TestCase):

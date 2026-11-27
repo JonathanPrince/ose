@@ -2,7 +2,7 @@
 
 Updated: 2026-11-26 by the coordinator (OSE-004, 005, 011, 012 and 013 merged to main on the human maintainer's instruction)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
-Guest lease: none held (released by the OSE-003 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (primary), ose-sysgen-2, ose-sysgen-3 (fresh rework build), ose-sysgen-1-negpin (refused by step 1b, may be deleted), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
+Guest lease: none held (released by the OSE-003 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (primary), ose-sysgen-2, ose-sysgen-3 (fresh rework build), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -35,7 +35,7 @@ Merged to main after independent review (2026-11-26):
 |---|---|---|---|---|
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
-| OSE-003 | Build host doctor and sysgen | REVIEW (b5cbb7d re-review: R03-1 remains; R03-2..5 technical fixes accepted; ADR-0006 proposed) | standard | coordinator |
+| OSE-003 | Build host doctor and sysgen | IMPLEMENTED (R03-1 fail-open fixed 2026-11-27 with regressions; awaiting re-review; R03-2..5 accepted; ADR-0006 accepted) | standard | coordinator |
 | OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 pending OSE-003 | standard | — |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |

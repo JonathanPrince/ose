@@ -1,4 +1,4 @@
-"""Build-host Debian package pins (ADR-0006, proposed; OSE-003 R03-5).
+"""Build-host Debian package pins (ADR-0006; OSE-003 R03-5).
 
 Reads upstream/debian/packages.lock.json and prints shell for the image builds:
 

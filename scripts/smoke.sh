@@ -11,7 +11,7 @@ NAME=ose-smoke
 SMOKE_EV=/work/evidence/smoke
 PY=${PYTHON:-$(command -v python3 2>/dev/null || command -v python)}
 DEBPINS="$PY -I $ROOT/scripts/lib/debpins.py"
-# R03-5 / ADR-0006 (proposed): the tools layer adds s3270 and netbase, pinned by
+# R03-5 / ADR-0006: the tools layer adds s3270 and netbase, pinned by
 # version and .deb SHA-256 in upstream/debian/packages.lock.json. The tag names
 # the pin set, and the installed versions are re-checked on every use, so an
 # older or hand-built image with the same name is never trusted.

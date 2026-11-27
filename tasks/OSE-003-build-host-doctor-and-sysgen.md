@@ -1,5 +1,5 @@
 # OSE-003 — Build host doctor and Sysgen wrapper; native TSO/JES smoke
-Status: REVIEW (re-review b5cbb7d: R03-1 still open; R03-2..R03-5 technical fixes accepted; ADR-0006 pending human decision)
+Status: IMPLEMENTED (R03-1 round-2 fix done 2026-11-27; awaiting independent re-review. R03-2..R03-5 accepted in round 2; ADR-0006 accepted by the human)
 Milestone: M0
 Dependencies: OSE-002; OSE-013 (added in the OSE-002 rework); ADR-0003 (accepted). Clone all caches with `core.autocrlf=false` (research sysgen-pins P-9)
 Owner: coordinator session (standard tier)
@@ -86,7 +86,7 @@ ADR-0003, ADR-0004, `dependencies.lock.json`, the sysgen README at the pin (reco
 - Next action:
   - Independent standard-tier review, including test 6 from the runbooks.
   - The OSE-004 guest part (deploy hello; RECEIVE the XMIT), the OSE-011 guest listing and OSE-006 can now use this image under a lease.
-  - The extra Debian packages are now pinned in `upstream/debian/packages.lock.json` (see the rework section; ADR-0006 proposed).
+  - The extra Debian packages are now pinned in `upstream/debian/packages.lock.json` (see the rework section; ADR-0006 accepted by the human 2026-11-27).
 - Usage/cost if available: not metered.
 
 ### Rework after review round 1 (R03-1..R03-5), 2026-11-27, author
@@ -121,6 +121,29 @@ Scope note: the rework touches files outside this card's list, needed by R03-5 a
 Lease: taken 2026-11-27T10:33:24Z on volumes `ose-sysgen-3` (new), `ose-sysgen-1` and `ose-sysgen-1-negpin`; released 2026-11-27 after all containers exited. `ose-sysgen-2` and the reviewer's volume were not touched. The old unpinned image `ose-hercules:4.9.1-ee86c4de-tools` is no longer used and can be deleted.
 
 Next action: independent re-review of R03-1..R03-5 (standard or high tier); human decision on ADR-0006.
+
+
+### Rework after review round 2 (R03-1 fail-open), 2026-11-27, author
+Baseline: review/OSE-003-r2 at 2915cc8 (fast-forwarded). Finding: inside `verify_sysgen_tree || exit 10`, bash ignores `set -e`, so a failed `git apply --cached` left the expected tree equal to the unpatched pin. An unpatched tree, together with a missing or invalid P-01, was then admitted.
+
+Fix (`scripts/lib/sysgen-in-container.sh`, step 1b): every command now checks its own status (`cmd || b1_fail … || return 1`). The patch must be a readable, non-empty file, must apply, and must change the tree (`pin + P-01` ≠ `pin`). All three tree IDs must be well-formed. Any failure refuses with RC 10 and a specific `step 1b FAILED:` reason. The scratch index and object store are always removed.
+
+| Check | RC | Result |
+|---|---|---|
+| `python -m unittest tests.host.test_harness.ResumeAdmission` | 0 | 11 tests. New: missing P-01 file with an unpatched and with a patched tree, empty P-01, non-patch text, patch that does not apply, broken object store; all refused, sysgen.py never runs |
+| the same 11 tests against b5cbb7d (scratch worktree, new test file only) | — | **6 failures**: exactly the new fail-open cases |
+| `python -m unittest discover -s tests/host` | 0 | 50 tests, 9 skipped (the T-PIN tests, which need caches absent in this worktree) (`rework-r2/test-host.txt`) |
+| `python -I scripts/check_repo.py` | 0 | |
+| real wrapper, volumes mounted **read-only**, `ATTEMPTS=0` (no sysgen run, no guest mutation): `ose-sysgen-1`, `ose-sysgen-3` | 20, 20 | step 1b ok for both, tree `0987ceab…` = pin + P-01. RC 20 is by design of `ATTEMPTS=0` (`rework-r2/admit-real-volumes.txt`) |
+| same on `ose-sysgen-1` with `P01=/nonexistent` | 10 | `step 1b FAILED: patch P-01 missing, unreadable or empty` (`rework-r2/refuse-missing-p01.txt`) |
+
+Evidence: `artifacts/evidence/ose-003/rework-r2/` (main workspace, not in Git).
+
+Human decisions 2026-11-27: **ADR-0006 accepted**; the status line was updated in the ADR, the index, the ADR-0005 pointer, the lock note, the runbook and the script comments. Deleted on instruction: image `ose-hercules:4.9.1-ee86c4de-tools` (unpinned, `fa761895…`) and volume `ose-sysgen-1-negpin`. Neither was in use by any container.
+
+Not rerun: guest smoke and sysgen. The change is confined to step 1b, which the real-volume runs above exercise. R03-2..R03-5 were accepted in round 2.
+
+Next action: independent re-review of the R03-1 fix; then the human decides on the merge.
 
 ## Independent review and gate result
 
