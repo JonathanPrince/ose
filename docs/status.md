@@ -21,7 +21,7 @@ Merged to main after independent review (2026-11-26):
 | Gate criterion | Tasks | Evidence/state |
 |---|---|---|
 | Pinned host/guest builds; repeated IPL/JES/TSO; reproducible HELLO deploy and runtime | 002, 003, 004, 012, 013 | accepted baseline evidence retained; independent clean-checkout platform repeat still required by 014 |
-| Generic leases, isolated ports/volumes, snapshot/restore and corruption rejection | 009 | READY; implementation/acceptance not run |
+| Generic leases, isolated ports/volumes, snapshot/restore and corruption rejection | 009 | positive independent recovery repeat passed; safety/test-isolation findings R09-1..R09-6 open |
 | Package configuration and shared harness; real MVP package install/runtime/recovery | 014 | BACKLOG, waits for 009; XMIT RECEIVE alone is insufficient |
 | Second independent example through unchanged shared harness | 014 | not run |
 | Standalone export, dependency rights/provenance, version and OSE consumption plan | 014 | not run; no publication authorization implied |
@@ -48,7 +48,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-006 | UFSD cross-space tests | BACKLOG (M0b; waits for M0a/014) | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG (M0b; waits for M0a/014; existing escalations retained) | high | — |
 | OSE-008 | Execution model and runtime audit | BACKLOG (M0b; waits for M0a/014) | high | — |
-| OSE-009 | Generic guest lease, snapshot, recovery | IMPLEMENTED (2026-11-27: acceptance 1-5 passed, end-to-end recovery RC 0; awaiting review) | standard | coordinator |
+| OSE-009 | Generic guest lease, snapshot, recovery | REVIEW (dc83bd5 positive recovery repeat passes; changes R09-1..R09-6; manual leases retained) | high rework | coordinator |
 | OSE-010 | M0b OSE gate review | BACKLOG (after M0a and OSE audits) | high and human | — |
 | OSE-011 | TSO terminal and name audit | MERGED (VERIFIED; source part and guest listing: no name collision) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
@@ -137,3 +137,7 @@ Reviewed 6880303 on `review/OSE-011-guest-r1`: positive guest acceptance indepen
 ## Platform-first sequencing amendment — 2026-11-27
 
 The human requested the generic MVP development platform before further OSE-specific tasks. This supersedes the earlier “OSE-014 after OSE-010” planning entry above: OSE-009 → OSE-014/M0a → OSE-006/007/008 → OSE-010/M0b → M1. Completed audits and review records remain evidence. Only documentation/task sequencing changed; no new gate acceptance, guest run, export or publication is claimed.
+
+## OSE-009 independent review — 2026-11-27
+
+Reviewed dc83bd5 on `review/OSE-009-r1`: changes requested R09-1..R09-6 (negative-pin target/source lease handling; restore rollback after users.conf failure; Docker busy-query failure admitted as stopped; exit cleanup releases a still-running guest; restore --create mutates before lease validation; whole-environment test patch breaks Git fixtures on Windows). Independent end-to-end recovery RC0/zero failures, including concurrent guests/ports, SIGKILL marker survival, restore/marker absence, JES/TSO and corruption refusal. Full host suite RC1: 89 passed, 11 errors, 9 skipped; author hashes31/31 match. Detailed reproduced fault evidence in OSE-009 card. Actual containers stopped and tool/manual review leases released; own reviewer volumes retained stopped. Keep manual lease protocol; no OSE-014 start, merge or push.
