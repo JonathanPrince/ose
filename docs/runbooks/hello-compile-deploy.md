@@ -1,6 +1,6 @@
 # Runbook: build the CC/370 toolchain and the hello load module (OSE-004)
 
-Last verified: 2026-11-26, on branch `task/OSE-004-hello-harness`, Windows 11 + Docker Desktop 29.9.3 (Git Bash), GNU Make 4.2.1. **Host part verified:** toolchain, libc and the hello load module. Deploy and run wait for the guest.
+Last verified: 2026-11-27, on branch `task/OSE-004-guest`, Windows 11 + Docker Desktop 29.9.3 (Git Bash). **Host part** (2026-11-26) and **guest part** (2026-11-27) verified: toolchain, libc, hello load module, deploy, batch and TSO run.
 
 ## Prerequisites
 - Docker with a running engine. Git and a POSIX `sh` (Git Bash on Windows). GNU make is optional: `make build` only calls `sh scripts/build.sh all`.
@@ -40,5 +40,32 @@ Last run: 2026-11-26, RC 0, with all five hashes as above. It takes about 4 minu
 
 `scripts/build.sh` pins the image by digest and every source by full commit SHA. It refuses a clone that is not at its pin or that has local changes.
 
-## Not yet possible
-- **Deploy (`make deploy`), batch run and TSO run.** These need the OSE-003 guest, a lease, and a decision on the deploy transport. mbt deploys through mvsMF; see research 2026-11-26-toolchain T-6. The XMIT is ready for a RECEIVE or RECV370 step.
+## Deploy and run on the guest (acceptance 2-4)
+Prerequisites: `make build` (HELLO.xmit at the hash above; `deploy.sh` refuses any other), the OSE-003 image and a sysgen'd volume, and the **guest lease**. Use a disposable copy of the reference volume, so `ose-sysgen-1` stays as built:
+
+```sh
+docker volume create ose-guest-004
+docker run --rm --user 0 -v ose-sysgen-1:/from:ro -v ose-guest-004:/to ose-hercules:4.9.1-ee86c4de sh -c 'cp -a /from/. /to/'
+export DASD_VOLUME=ose-guest-004
+```
+
+| Step | Command | Success looks like | Failure looks like |
+|---|---|---|---|
+| Deploy (acceptance 2) | `make deploy` (= `sh scripts/deploy.sh deploy`) | RC 0; `OSEHDEP: step DELOLD … 0000`, `GONE … 0004`, `STAGE`, `RECV`, `CLEANUP … 0000`; then `OSEHLST: MVSCE02.OSE.LOAD members ['HELLO']` | RC 1 with `MISMATCH` or an empty member list; read `<mode>-prt00e.txt` |
+| Batch and TSO (acceptance 3, 4) | `sh scripts/deploy.sh run` | RC 0; `step RC0 … 0000`, `step RC4 … 0004`, output lines `['OSE-004 HELLO RC=0', 'OSE-004 HELLO RC=4']`, `TSO: {... 'call_plain': True ... 'logoff': True}` | RC 1; the TSO screens are `tso-NN-*.txt` |
+| Both | `sh scripts/deploy.sh all` | both of the above, about 3.5 minutes | |
+| Negative test for the stale-library guard | `sh scripts/deploy.sh stale` | RC 0. A normal deploy, then the same job without the target DELETE (`OSEHSTL`): `GONE … 0000`, and `IEF202I … STEP WAS NOT RUN BECAUSE OF CONDITION CODES` for STAGE, RECV and CLEANUP, with no second RECEIVE | RC 1: the guard let a step run |
+
+How it works:
+1. The deck goes to the EBCDIC card reader (`001A`, port 3506): the job `jcl/hello/deploy.jcl` with the XMIT's raw records in-stream behind `DD DATA,DLM=`. No FTPD and no mvsMF are involved. RECEIVE unpacks the XMIT into `<user>.OSE.LOAD` on PUB000.
+2. Step GONE must find the old library deleted (LISTCAT CC 4) before anything is received. A stale library can therefore never pass as a fresh deploy. STAGE, RECV and CLEANUP each test DELOLD and GONE themselves, because MVS ignores a COND test that names a bypassed step (review R04-2).
+3. A separate job, `jcl/hello/list.jcl`, lists the members. Acceptance 2 relies on that listing, not on the deploy's RCs.
+4. `jcl/hello/run.jcl` runs HELLO twice. The step RC must equal the PARM (0, 4), and SYSPRINT must hold exactly the expected line, parsed from the JES2 printer file.
+5. TSO: the driver logs on as MVSCE02, enters `CALL '<user>.OSE.LOAD(HELLO)' '7'` and expects `OSE-004 HELLO RC=7`. If that line does not appear, it tries again after `ALLOC F(SYSPRINT) DA(*)` and records which of the two worked.
+
+Each mode is one cold IPL with the OSE-003 shutdown rules: `$HASP099`, `$HASP085` and `IEE334I` in order after the shutdown request. The user is MVSCE02; its password is read at run time from the volume's `users.conf` and redacted from every saved file.
+
+Evidence: a new directory per invocation, `artifacts/evidence/ose-004/guest/runs/<UTC>-<pid>/<mode>/`, holding `console.txt`, `<mode>-result.json`, `<mode>-prt00e.txt`, `<mode>-mvslog.txt` and the TSO screens. Earlier runs are never overwritten. The guest writes its copy to `/work/evidence/ose-004/runs/<same id>/` in the volume. After the export, `deploy.sh` compares sha256 manifests of both copies and deletes the guest copy only if they match. Otherwise it prints `EVIDENCE: …`, keeps the guest copy and exits nonzero, even when every guest check passed (review R04-3).
+
+Observed 2026-11-27 on `ose-guest-004`: deploy RC 0 five times (about 54 s each; three of them re-deploys over an existing library) and run RC 0 four times (about 120 s each).
+

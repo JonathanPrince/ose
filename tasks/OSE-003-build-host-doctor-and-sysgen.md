@@ -145,6 +145,10 @@ Not rerun: guest smoke and sysgen. The change is confined to step 1b, which the 
 
 Next action: independent re-review of the R03-1 fix; then the human decides on the merge.
 
+
+### Post-merge evidence incident, 2026-11-27 (coordinator)
+During OSE-004, a regression `smoke.sh ipl1` overwrote 9 of the 47 files under `artifacts/evidence/ose-003/` that `SHA256SUMS` covers. They are the `smoke/` directory and `smoke-ipl1-console.txt`; the originals are lost. The verification of record is the r1 review, which checked 47/47 before this happened. Details: `artifacts/evidence/ose-003/INCIDENT-2026-11-27-overwrite.md`. Fix (branch task/OSE-004-guest): every smoke invocation now exports to a new `smoke-runs/<UTC>-<pid>/`.
+
 ## Independent review and gate result
 
 ### Independent review — 2026-11-27

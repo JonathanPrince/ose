@@ -2,7 +2,7 @@
 
 Updated: 2026-11-27 by the coordinator (OSE-003 merged to main on the human maintainer's instruction; ADR-0006 accepted)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
-Guest lease: none held (released by the OSE-003 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (primary), ose-sysgen-2, ose-sysgen-3 (fresh rework build), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
+Guest lease: none held (released by the OSE-004 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004 (OSE-004 deploy target), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -36,7 +36,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
 | OSE-003 | Build host doctor and sysgen | MERGED (VERIFIED at 85414c2; ADR-0006 accepted) | standard | coordinator |
-| OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 READY (OSE-003 merged) | standard | coordinator |
+| OSE-004 | CC/370 + MBT hello | VERIFIED (c76f088 guest re-review accepted; host already MERGED; human merge pending) | standard | coordinator |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG (OSE-005 escalations G-1, G-2, G-11, G-12 waiting) | high | — |
@@ -105,3 +105,11 @@ Reviewed b5cbb7d: 44 host tests (35 pass, 9 skipped), healthy real-tree read-onl
 ## Reusable development environment direction — 2026-11-27
 
 The human requested a separate repository that reuses the M0 development foundation for other MVS/CE MVP package projects. Spec §§1.1/4.1/5.1 now define the boundary and export gate; OSE-014 is BACKLOG after the existing M0 gate, independent of M1–M5. Export acceptance requires clean independent reproduction, a real MVP package installation, a second example using shared harness code, recovery/evidence checks, license/provenance review and a versioned OSE consumption plan. Extraction and publication have not started; repository destination and release remain human decisions. Existing M0 security gates remain in force.
+
+## OSE-004 independent guest review — 2026-11-27
+
+Reviewed 9a57b02 on `review/OSE-004-guest-r1`: changes requested R04G-1 (RECV/CLEANUP execute when GONE bypasses STAGE, reproduced on MVS 3.8j) and R04G-2 (failed evidence export returns success, mocked reproduction). Independent deploy/list, batch 0000/0004 with exact output, TSO CALL7 and clean shutdowns passed. Host suite RC0: 54 passed, 9 skipped; repo check RC0. Author OSE-004 manifest 64/64 verified; OSE-003 exactly the 9 disclosed damaged entries, originals not repaired. See OSE-004 card for commands/evidence and rework. Lease released; no running review containers; disposable reviewer volume `ose-review-004-20261127` retained stopped. No merge/push.
+
+## OSE-004 guest re-review — 2026-11-27
+
+`c76f088` VERIFIED on `review/OSE-004-guest-r2`, high-tier independent re-review: R04G-1/R04G-2 (author R04-2/R04-3) closed, no new findings. Real stale-library test skips STAGE/RECV/CLEANUP with no second RECEIVE; normal deploy/list, batch 0000/0004 with exact output, TSO CALL7 and smoke IPL pass. Four clean IPL/shutdown cycles; verified exports. Host suite RC0: 59 passed/9 skipped (source caches absent); extra evidence failure mocks fail correctly and retain guest copies. Author's 26 rework hashes and previous review's 32 hashes unchanged. See card for exact commands/evidence and limits. Lease released; all containers stopped; disposable reviewer volume `ose-review-004-r2-20261127` retained stopped. Human merge pending.

@@ -74,7 +74,7 @@ The smoke requires all three messages, **in this order and after its own shutdow
 
 **TSO handshake** (R03-4): in IPL 2, `mvs-smoke.py` (in the container) and `smoke.sh` (on the host) coordinate through two files, `ipl2-<run-id>-ready` and `ipl2-<run-id>-tso-done`. The run ID is new for every `smoke.sh` invocation, and `mvs-smoke.py` deletes every older `ipl2-*` marker before Hercules starts. A previous run's files can therefore neither start TSO early nor end the IPL before this run's TSO check. If no `tso-done` arrives within 900 s, IPL 2 fails.
 
-Evidence: `artifacts/evidence/ose-003/smoke/`:
+Evidence: a new directory per invocation, `artifacts/evidence/ose-003/smoke-runs/<UTC>-<pid>/`, which must not exist yet. The volume's own `/work/evidence/smoke/` is emptied at the start, so nothing from an earlier run is exported as this run's. (Before 2026-11-27 the export went to the fixed `artifacts/evidence/ose-003/smoke/`; see the incident note there.) It holds:
 - `ipl1-*` and `ipl2-*`: `hercules.log`, `mvslog.txt` and `result.txt`;
 - `prt00e.txt`;
 - `tso-NN-*.txt` (the screens, password redacted) and `tso-s3270.log`.

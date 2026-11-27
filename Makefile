@@ -31,7 +31,9 @@ sysgen:
 smoke:
 	sh scripts/smoke.sh all
 
-deploy:        ; $(call notyet,OSE-004)
+# OSE-004 acceptance 2 (deploy + listing job); `sh scripts/deploy.sh run` does 3-4
+deploy:
+	sh scripts/deploy.sh deploy
 test-guest:    ; $(call notyet,OSE-006/OSE-009)
 test-security: ; $(call notyet,OSE-007 (plan only in M0))
 package:       ; $(call notyet,M5)
