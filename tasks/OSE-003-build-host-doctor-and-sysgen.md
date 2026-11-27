@@ -1,5 +1,5 @@
 # OSE-003 — Build host doctor and Sysgen wrapper; native TSO/JES smoke
-Status: IMPLEMENTED (R03-1 round-2 fix done 2026-11-27; awaiting independent re-review. R03-2..R03-5 accepted in round 2; ADR-0006 accepted by the human)
+Status: VERIFIED (85414c2 independent focused re-review, 2026-11-27; all findings closed; awaiting human merge)
 Milestone: M0
 Dependencies: OSE-002; OSE-013 (added in the OSE-002 rework); ADR-0003 (accepted). Clone all caches with `core.autocrlf=false` (research sysgen-pins P-9)
 Owner: coordinator session (standard tier)
@@ -216,3 +216,18 @@ Completed checks so far:
 Re-review gate result: **R03-2, R03-3, R03-4 and R03-5 technical changes accepted; R03-1 remains P1 / changes requested.** ADR-0006 remains a human decision. No full Sysgen rebuild was repeated because its pinned upstream code is unchanged; the previous independent test-6 proof and the author's hashed rework fresh-build record were retained. The changed admission logic was tested with real Git fixtures and a read-only real-volume check, and the changed runtime smoke drivers were independently exercised twice. No implementation, dependency decision, guest dataset outside the review volume, merge or release was changed by this review.
 
 Evidence root: `artifacts/review/OSE-003-r2/artifacts/evidence/ose-003-r2/` relative to the main workspace. REVIEW-SHA256SUMS covers the retained local re-review evidence; its SHA-256 is `4e0989f0c0408462de029742d81eb5ee7a512285119ac175d6af01702a399934`. Next action: explicitly propagate every verifier command failure and add the missing/invalid-patch/error-in-comparison regressions, then request focused re-review. The positive full-build proof need not be discarded for this localized verifier fix.
+
+### Independent focused re-review — 2026-11-27, 85414c2
+
+Reviewer: Codex, high tier, independent of author. Reviewed 85414c2 against 2915cc8 on review/OSE-003-r3 (worktree path artifacts/review/OSE-003-r2). **Accepted / VERIFIED. R03-1 closed; no new findings.** R03-2..R03-5 remain accepted from the prior re-review. ADR-0006 now records human acceptance, resolving the remaining decision gate.
+
+The verifier now explicitly propagates setup and Git failures, verifies patch existence/readability/content, validates tree IDs and rejects a no-op patch. The conditional `set -e` trap no longer controls admission. Independently reran the prior two missing/invalid expected-patch cases using real temporary Git fixtures and the unchanged verifier/helper source extracted under the original `|| exit 10` calling context: both correctly return **10**, and the regression runner returns RC 0 (2 tests passed). This runner includes the new helper definitions; no implementation edits were made.
+
+Validation:
+- `OSE_BASH=<Git Bash> python -I -m unittest discover -s tests/host -v` in this review worktree: **RC 0, 50 tests total, 41 passed, 9 skipped**, 58.377 s. New cases cover missing/empty/invalid/non-applying P-01 and Git failure, alongside the admitted correct tree and earlier failure-path regressions. The unchanged pin tests are skipped because caches are absent here; not claimed as rerun.
+- `python -I artifacts/evidence/ose-003-r3/review_guard_only.py`: **RC 0**, 2 independent reproductions now pass, 7.631 s. Guard RC 10 in each case, with the expected failure message.
+- `python -I scripts/check_repo.py`: RC 0; `git diff --check`: RC 0 (rerun after this record).
+
+No new guest run, lease or full Sysgen rebuild was needed for this localized error-handling fix. The earlier independent clean-build/test-6 proof (3181 s, two IPLs and raw JES2/TSO evidence), the author's fresh rework build, and the prior independent two consecutive updated smoke cycles remain the runtime evidence. This review closes the admission gap without claiming those long-running tests were repeated today in this focused pass. No source, dependency/ADR decision, guest volume, merge or release was changed by the reviewer.
+
+Evidence: `artifacts/review/OSE-003-r2/artifacts/evidence/ose-003-r3/` relative to main, including host-tests.txt/.rc, the independent regression runner and its output/RC. REVIEW-SHA256SUMS SHA-256: `e1bfe1a04ffa0a2af6f6073d6f8309c3fe4d4696261f0d282da6785a6f248238`. Next action: human integration of VERIFIED OSE-003; subsequent guest tasks acquire their own lease. Human owns merge and release.

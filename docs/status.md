@@ -35,7 +35,7 @@ Merged to main after independent review (2026-11-26):
 |---|---|---|---|---|
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
-| OSE-003 | Build host doctor and sysgen | IMPLEMENTED (R03-1 fail-open fixed 2026-11-27 with regressions; awaiting re-review; R03-2..5 accepted; ADR-0006 accepted) | standard | coordinator |
+| OSE-003 | Build host doctor and sysgen | VERIFIED (85414c2, all findings closed; ADR-0006 accepted; awaiting human merge) | standard | coordinator |
 | OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 pending OSE-003 | standard | — |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
@@ -97,3 +97,7 @@ Test 6 completed: fresh worktree/new volume; fetch/doctor/build/smoke RC 0; Herc
 ## OSE-003 re-review — 2026-11-27
 
 Reviewed b5cbb7d: 44 host tests (35 pass, 9 skipped), healthy real-tree read-only admission and pins pass, doctor passes, two consecutive guest smoke cycles pass (four IPLs 9/9/8/9 s, JES2 0000/0004 and TSO twice, clean ordered shutdowns). Two additional missing/invalid expected-patch cases expose the remaining fail-open verifier (R03-1 P1): failed git apply is ignored and an unpatched tree is admitted. R03-2..5 technical fixes accepted. ADR-0006 is still proposed. Changes requested; lease released, author volumes untouched. See task card and review/OSE-003-r2 evidence.
+
+## OSE-003 focused re-review — 2026-11-27
+
+85414c2 VERIFIED: R03-1 fail-open path closed, independent missing/invalid patch cases now return 10, host suite 41 passed/9 skipped, and no new findings. R03-2..5 and runtime evidence remain accepted from prior reviews; ADR-0006 is recorded accepted by the human. No new guest run or lease. Human owns integration.
