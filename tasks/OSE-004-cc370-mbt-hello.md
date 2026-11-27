@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: IMPLEMENTED (host part merged 2026-11-26; guest acceptance 2-5 passed 2026-11-27 on task/OSE-004-guest; awaiting independent review of the guest part)
+Status: REVIEW (host part merged; guest positive acceptance independently passed at 9a57b02; changes requested R04G-1 and R04G-2)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner: author model (standard tier)
@@ -114,3 +114,27 @@ Reviewer: Codex, high tier (escalated re-review after previous changes request),
 - Independently recomputed SHA-256 with Python hashlib: all five expected hashes match, including libc.a d3a422e8..., hello.s 866cd302..., hello.o 1a1001c4..., HELLO 81757408... and HELLO.xmit 0e69e9fa.... Full values are in the existing T-7 table and output files. Evidence: `artifacts/review/OSE-004-r1/artifacts/evidence/ose-004/` relative to the main workspace (build logs, macro check, versions, hashes and file370 decodes). Hash assertions returned RC 0.
 - `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 tests passed; `git diff --check` -> RC 0 before recording this review.
 - Deploy, guest listing, planted batch RC/output, TSO invocation and TK5 macro/runtime compatibility remain not-run, pending OSE-003, a guest lease and deploy-transport decision. No guest mutation, dependency change, merge or release. Next action: human integration of the accepted host work; complete acceptance 2-4 when the guest is ready.
+
+### Independent guest review — 2026-11-27
+
+Reviewer: Codex, standard tier, independent of author. Reviewed `9a57b02` against `3658ace` on `review/OSE-004-guest-r1`, worktree `artifacts/review/OSE-004-guest-r1`. **Changes requested; positive guest acceptance 2–4 independently passed.** No implementation changes, merge or push.
+
+- **R04G-1 [P2], `jcl/hello/deploy.jcl:33` (also line 40): the GONE guard does not prevent downstream execution.** On the actual OSE-003 MVS/CE reviewer build (MVS 3.8j), a harmless IEFBR14 job with the same conditions produced DELOLD=0000, GONE=0000, STAGE bypassed (`IEF202I`/`IEF272I`), but RECV=0000 and CLEANUP=0000. A condition referring to a bypassed step did not suppress the next step. Thus the documented guarantee that all three steps are skipped when the old library survives is false. The Python driver rejects the overall run, but it does so after RECEIVE has been attempted; with leftover staging data it can still receive into the old library. Repeat the prerequisite conditions directly on RECV and CLEANUP (or use a target-supported equivalent) and add a negative guest test with GONE=0 proving all three steps are bypassed. The diagnostic substitutes IEFBR14 for the programs; it establishes condition behavior, not the cause of the original DELETE anomaly.
+- **R04G-2 [P2], `scripts/deploy.sh:46–50`: evidence export failure is discarded.** A local mocked Docker call returned 23 for the evidence copy after guest RC 0; `sh scripts/deploy.sh run` still returned 0. The new run directory then lacks result JSON and spool/terminal proof. The next invocation deletes `/work/evidence/ose-004/<mode>`, so the only complete copy can be lost. Propagate capture/export failures and retain recoverable guest evidence until export succeeds; verify required evidence exists before success. `smoke.sh` has the same ignored-export pattern and should use the same handling. This is material to the evidence preservation incident fix.
+
+Validation and evidence (all paths below relative to this review worktree):
+
+| Command/check | RC | Result |
+|---|---|---|
+| `python -I -m unittest discover -s tests/host -v`, `OSE_BASH=C:/Program Files/Git/bin/bash.exe` | 0 | 63 tests: 54 passed, 9 skipped (source caches absent); `artifacts/evidence/review-ose-004/host-tests.txt` |
+| `python -I scripts/check_repo.py` | 0 | repository check passed |
+| `PYTHON=python DASD_VOLUME=ose-review-004-20261127 sh scripts/deploy.sh all` | 0 | deploy/list HELLO passed; batch RC0=0000 and RC4=0004 with exact output; TSO plain CALL7 output and logoff passed; evidence `artifacts/evidence/ose-004/guest/runs/20261127T131220Z-535/`, wrapper log and RC in `artifacts/evidence/review-ose-004/` |
+| `docker run --rm --name ose-review-cond-004 --user 1000:1000` with worktree `/ose:ro`, evidence `/out`, leased volume `/work`, tools image `ose-hercules:4.9.1-ee86c4de-tools-834605f5b6b7`, `python3 -I /out/cond-review.py` | 0 | R04G-1 reproduced; redacted deck, raw spool, result, console and shutdown log in `artifacts/evidence/review-ose-004/cond-*` |
+| `bash artifacts/evidence/review-ose-004/export-failure.sh` (mock only; no actual Docker calls) | 0 (incorrect) | R04G-2 reproduced: simulated copy RC 23 discarded; fixture/output retained |
+| Python SHA-256 verification of author manifests | 0 | OSE-004: 64/64 match, manifest hash f3c47c45943cbf7c3906a69b0bd01a8f6a998ac0de306aae155424f97f0d514e. OSE-003: exactly the 9 disclosed mismatches among 47; no additional mismatches; `author-manifests.json` |
+
+Lease acquired before cloning or running; author volumes never mounted. Disposable `ose-review-004-20261127` copied from stopped reviewer baseline `ose-sysgen-review-003-20261127`. Three cold IPLs, each with ordered shutdown messages after the request, Hercules RC 0 and no forced quit. All containers stopped, lease released; reviewer volume retained stopped. The independently built HELLO.xmit from the accepted host review was used after verifying its full recorded hash. Acceptance 1 was not rebuilt in this guest review. T-8 appropriately limits runtime macro/varargs claims to HELLO's paths; it must correct the skipped-step claim with R04G-1. The tools/credentials helper move and per-run export destination are reasonable scope extensions for this harness. The overwritten OSE-003 originals remain damaged as disclosed; their manifest was not rewritten. Prior independent OSE-003 evidence is separate and preserved.
+
+Next action: fix R04G-1/R04G-2, add the failure-path checks, and request re-review; escalate rework one tier per task conventions. Do not mark VERIFIED yet.
+
+Review evidence sealed: `artifacts/evidence/review-ose-004/REVIEW-SHA256SUMS`, 32 files, manifest SHA-256 `1ce2cc9214136e98115346692d5c0f7ec859ad51eae532c4c5c3559bc25aa504`. Credential scan of reviewer evidence and guest exports: RC 0, no password found. Final `docker ps` empty and shared checkout clean after lease release.
