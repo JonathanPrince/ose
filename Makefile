@@ -34,7 +34,7 @@ smoke:
 # OSE-004 acceptance 2 (deploy + listing job); `sh scripts/deploy.sh run` does 3-4
 deploy:
 	sh scripts/deploy.sh deploy
-test-guest:    ; $(call notyet,OSE-006/OSE-009)
-test-security: ; $(call notyet,OSE-007 (plan only in M0))
-package:       ; $(call notyet,M5)
+test-guest:    ; $(call notyet,OSE-014 generic platform; OSE-006 after M0a)
+test-security: ; $(call notyet,OSE-007 (plan only in M0b))
+package:       ; $(call notyet,OSE-014 generic MVP packaging in M0a; OSE distribution in M5)
 restore:       ; $(call notyet,OSE-009)

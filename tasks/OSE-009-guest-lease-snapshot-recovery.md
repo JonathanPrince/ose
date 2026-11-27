@@ -1,6 +1,6 @@
 # OSE-009 — Guest lease, snapshot and recovery harness
-Status: BACKLOG
-Milestone: M0
+Status: READY
+Milestone: M0a (generic platform)
 Dependencies: OSE-003
 Owner:
 Risk: medium
@@ -13,6 +13,7 @@ Baseline commit:
 
 ## Goal and non-goals
 Goal: tooling that (a) gives each task an isolated guest image with configurable ports, (b) makes it impossible for two mutating tasks to use the same emulator or DASD set at once, and (c) snapshots and restores a known-good DASD set. It must be proven by forced-failure recovery. This replaces the manual `Guest lease:` line in `docs/status.md`.
+The harness must use package-neutral guest/volume/port configuration and be usable by both the MVP example projects and OSE, without an OSE runtime service. It is the next implementation priority and feeds OSE-014; no OSE-006/007/008 completion is required.
 Non-goals: a general orchestrator (spec §10), cloud hosting.
 
 ## Inputs and primary references
@@ -40,3 +41,6 @@ Hercules locking or shadow-file behavior differs from its documentation → reco
 - Next action:
 - Usage/cost if available:
 ## Independent review and gate result
+
+### Scheduling amendment — 2026-11-27
+Human direction: deliver the generic platform before new OSE-specific work. OSE-003 is merged, so this card is READY. Implement and independently review isolation/recovery first, then use it for OSE-014. Acceptance tests above remain mandatory; existing manual leases remain in force until the replacement is reviewed. No harness acceptance test ran as part of this documentation amendment.

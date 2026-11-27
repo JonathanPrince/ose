@@ -2,7 +2,7 @@
 
 OSE is a proposed native UNIX-style subsystem for MVS 3.8j under Hercules. It will be distributed as an optional MVS/CE Sysgen profile.
 
-**Status: M0 (baseline and source audit). Nothing is implemented.** Treat every architecture statement as a proposal until milestone evidence supports it. Current state, blockers and next tasks: [docs/status.md](docs/status.md).
+**Current priority: M0a, a reusable MVP package development platform.** The pinned build/guest/HELLO baseline is accepted. Finish generic isolation/recovery (OSE-009), then package configuration, MVP examples and export acceptance (OSE-014), before new OSE-specific audits (M0b) or subsystem work. Current state, blockers and next tasks: [docs/status.md](docs/status.md).
 
 ## Start here
 
@@ -17,11 +17,11 @@ Model-specific wrapper files (for example `CLAUDE.md`) only point to `AGENTS.md`
 
 ## Layout
 
-See spec section 4. In short: `spec/` holds the normative spec, `docs/` the ADRs, research, interfaces, runbooks and status, `tasks/` the task cards and usage log, `upstream/` manifests and patches (never vendored copies), and `src/`, `include/ose/`, `jcl/` and `tests/` code (empty until M1). `artifacts/` is git-ignored and holds logs, dumps and DASD images.
+See spec section 4. In short: `spec/` holds the normative spec, `docs/` the ADRs, research, interfaces, runbooks and status, `tasks/` the task cards and usage log, `upstream/` manifests and patches (never vendored copies), and `src/`, `include/ose/`, `jcl/` and `tests/` hold code and verification fixtures. `artifacts/` is git-ignored and holds logs, dumps and DASD images.
 
 ## Commands
 
-The stable command surface comes from spec section 4. During M0 only `make check` works. The other targets exit with status 2 and name the task that owns them.
+The stable command surface comes from spec section 4. Build, deploy and host/guest smoke commands exist for the accepted baseline. Generic MVP packaging and recovery are the next M0a deliverables; unsupported targets still exit nonzero and name their owner.
 
 ```
 make check          # repository consistency checks (python3 scripts/check_repo.py)
@@ -31,9 +31,9 @@ make build          # OSE-004
 make sysgen         # OSE-003
 make deploy         # OSE-004
 make test-host      # host unit tests (tests/host)
-make test-guest     # OSE-006 / OSE-009
-make test-security  # OSE-007 (plan only in M0)
-make package        # M5
+make test-guest     # generic platform tests: OSE-014; OSE-specific tests after M0a
+make test-security  # OSE-007 (plan in M0b)
+make package        # generic MVP workflow: OSE-014/M0a; OSE distribution: M5
 make restore        # OSE-009
 ```
 

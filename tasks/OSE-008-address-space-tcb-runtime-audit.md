@@ -1,7 +1,7 @@
 # OSE-008 — Address-space/TCB mechanisms and C runtime audit
 Status: BACKLOG
-Milestone: M0
-Dependencies: OSE-002, OSE-004 (needs the toolchain facts)
+Milestone: M0b (after reusable platform gate)
+Dependencies: OSE-014 (M0a independently accepted with human gate approval); OSE-002, OSE-004 (needs the toolchain facts)
 Owner:
 Risk: high
 Model tier: high
@@ -41,3 +41,6 @@ Conflicting sources about 3.8j behavior → record both and ask for human review
 - Next action:
 - Usage/cost if available:
 ## Independent review and gate result
+
+### Scheduling amendment — 2026-11-27
+Human direction: prioritize the reusable MVP development platform. This task remains BACKLOG until M0a acceptance recorded in OSE-014. Existing technical acceptance criteria and security requirements are unchanged; reuse the accepted platform when work starts.

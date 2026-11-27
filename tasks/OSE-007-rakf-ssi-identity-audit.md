@@ -1,7 +1,7 @@
 # OSE-007 — RAKF and SSI identity feasibility audit
 Status: BACKLOG
-Milestone: M0
-Dependencies: OSE-002, OSE-005
+Milestone: M0b (after reusable platform gate)
+Dependencies: OSE-014 (M0a independently accepted with human gate approval); OSE-002, OSE-005
 Owner:
 Risk: high (security boundary)
 Model tier: high
@@ -46,3 +46,6 @@ Evidence that default MVS/CE lets an ordinary user gain authorization or read ot
 - Next action:
 - Usage/cost if available:
 ## Independent review and gate result
+
+### Scheduling amendment — 2026-11-27
+Human direction: prioritize the reusable MVP development platform. This task remains BACKLOG until M0a acceptance recorded in OSE-014. Existing technical acceptance criteria and security requirements are unchanged; reuse the accepted platform when work starts.

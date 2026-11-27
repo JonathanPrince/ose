@@ -1,7 +1,7 @@
 # OSE-006 — UFSD cross-address-space filesystem tests
 Status: BACKLOG
-Milestone: M0
-Dependencies: OSE-003, OSE-004, OSE-005 (OSE-009 strongly preferred for snapshot and restore)
+Milestone: M0b (after reusable platform gate)
+Dependencies: OSE-014 (M0a independently accepted with human gate approval); OSE-003, OSE-004, OSE-005 (OSE-009 strongly preferred for snapshot and restore)
 Owner:
 Risk: medium
 Model tier: standard
@@ -45,3 +45,6 @@ Data corruption or server ABEND → capture the dump, mark the DASD as tainted, 
 - Next action:
 - Usage/cost if available:
 ## Independent review and gate result
+
+### Scheduling amendment — 2026-11-27
+Human direction: prioritize the reusable MVP development platform. This task remains BACKLOG until M0a acceptance recorded in OSE-014. Existing technical acceptance criteria and security requirements are unchanged; reuse the accepted platform when work starts.
