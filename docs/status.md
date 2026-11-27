@@ -43,7 +43,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | IMPLEMENTED (guest listing: no collision; R11-G1 accepted; R11-G2 test isolation fixed 2026-11-27; awaiting re-review) | economy → standard | coordinator |
+| OSE-011 | TSO terminal and name audit | VERIFIED (5815701 re-review accepted; source and guest listing accepted; human merge pending) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 
@@ -121,3 +121,7 @@ Reviewed 6880303 on `review/OSE-011-guest-r1`: positive guest acceptance indepen
 ## OSE-011 focused re-review — 2026-11-27
 
 665604f closes R11G-1: independent intact guest-spool replay passes; four damaged evidence variants fail correctly. New P2 R11G-2: MainReplay's whole-environment clear/restore removes an inherited empty Git config variable from native Windows inheritance; clean git init RC0 before replay tests, RC128 after. Full host suite: 69 passed, 11 errors, 9 skipped (RC1). Changes requested, not VERIFIED. Author rework hashes 5/5 verified. No new guest run/lease or implementation changes; prior independent guest listing remains valid. See card/evidence on `review/OSE-011-guest-r2`. No merge/push.
+
+## OSE-011 final focused re-review — 2026-11-27
+
+5815701 VERIFIED on `review/OSE-011-guest-r3`: R11G-2 closed, no new findings. Full Windows host suite RC0: 81 passed/9 skipped, including all previously failing Git admission fixtures; independent native git-init probe RC0 before and after replay tests. Prior independent guest listing and R11G-1 closure remain accepted, evidence unchanged (25/25 prior reviewer hashes verified). No new guest work/lease, dependency change, merge or push. See task card for exact commands/evidence and scope. Human integration pending.

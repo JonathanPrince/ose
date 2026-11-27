@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: IMPLEMENTED (source part accepted; guest listing done 2026-11-27; R11-G1 accepted; R11-G2 fixed 2026-11-27; awaiting re-review)
+Status: VERIFIED (source and guest listing accepted; 5815701 closes R11G-2 on 2026-11-27; human merge pending)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -165,3 +165,20 @@ Baseline: review/OSE-011-guest-r2 at 41b06c4 (fast-forwarded). Test-only change,
 Checks: `python -m unittest tests.host.test_audit_listing` RC 0 (22 tests); `python -m unittest discover -s tests/host` RC 0; `python -I scripts/check_repo.py` RC 0.
 
 Next action: re-review of R11-G2; then the human decides on the merge.
+
+### Independent focused re-review — 2026-11-27
+
+Reviewer: Codex, high tier (continued escalated re-review), independent of author. Reviewed `5815701` against `41b06c4` on `review/OSE-011-guest-r3`, separate worktree `artifacts/review/OSE-011-guest-r3`. **Accepted; R11G-2 closed; no new findings. OSE-011 VERIFIED, human merge pending.** R11G-1 and the independently repeated positive guest listing remain accepted from the previous reviews.
+
+The replay helper changes/restores only GUEST_USER/GUEST_PASS and uses scoped sys.argv replacement. It no longer clears or rewrites unrelated environment entries. The new regression checks restoration of the modified keys, preservation of an unrelated key introduced during the replay, absence of a whole-environment clear, and restoration of sys.argv.
+
+| Command/check | RC | Result / evidence (relative to this review worktree) |
+|---|---|---|
+| `OSE_BASH=C:/Program Files/Git/bin/bash.exe python -I -m unittest discover -s tests/host -v` | 0 | 90 tests: 81 passed, 9 skipped (pinned Sysgen/MVP source caches absent). All 11 previously failing Git admission fixtures now pass; `artifacts/evidence/review-ose-011-r3/host-tests.txt` and `.rc` |
+| `python artifacts/evidence/review-ose-011-r3/environment-regression.py` | 0 | previous independent same-process reproduction now passes: native git init RC0 before and RC0 after all four MainReplay tests, with inherited empty GIT_CONFIG_VALUE_0 present; JSON/console/RC retained |
+| Python verification of previous review manifest | 0 | 25/25 files unchanged; previous manifest SHA256 7ffffd426d18aa62c6cd79d5492931325a002cafb3b279a8fd3da80d7d4d721a; `previous-review-manifest.json` |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | repository/docs checks |
+
+Evidence/fixture root: `artifacts/evidence/review-ose-011-r3/`. The before/after Git reproduction uses a child Python process and temporary disposable repositories; no shared process environment or guest state was changed. This commit changes test isolation only: no guest driver, JCL or shared runner changes. No new guest build/listing, terminal probes, guest lease, dependency change, merge or push. The prior independent guest listing of 32 libraries/3825 distinct names, live configuration coverage, catalog/IEFJSSNT checks and limited no-collision conclusion remain the guest evidence; other users' libraries, later packages and dynamic subsystem names remain the documented limits. Terminal runtime probes and historical macro-manual research are still open beyond this task's accepted audit scope. Next action: human integration of the verified branch.
+
+Final re-review evidence manifest: `artifacts/evidence/review-ose-011-r3/REVIEW-SHA256SUMS`, 7 files; SHA-256 `604ecb15f200d5adb71e7f79f6b9988256c7545b7114d853f0515938b25fdcb0`.
