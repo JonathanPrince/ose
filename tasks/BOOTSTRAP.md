@@ -1,54 +1,49 @@
-# Initial ready queue
+# Platform-first work queue
 
-| Task | Scope | Depends | Tier | Acceptance |
-|---|---|---|---|---|
-| OSE-001 | Initialize repository, docs, task schema, CI skeleton | none | economy | clean checkout; AGENTS.md and status accessible; no vendor requirement |
-| OSE-002 | Inventory upstream versions/licenses and pin dependencies | 001 | economy + standard review | manifest with source evidence and unresolved rights |
-| OSE-003 | Build host doctor and Sysgen wrapper | 002 | standard | clean non-root build, boot evidence, native TSO/JES smoke |
-| OSE-004 | CC/370 + MBT hello compile/deploy harness | 002 | standard | actual guest execution, RC and output captured |
-| OSE-005 | UFSD source/interface audit | 002 | standard | service/ABI and permission gaps documented with source locations |
-| OSE-006 | UFSD cross-space filesystem tests | 003,004,005 | standard | two clients, persistence, byte roundtrip, failure cases |
-| OSE-007 | RAKF and SSI identity feasibility audit | 002,005 | high | trusted caller hypotheses, evidence, negative test plan |
-| OSE-008 | Address-space/TCB and runtime audit | 002,004 | high | candidate mechanisms and runnable experiment designs |
-| OSE-009 | Guest lease, snapshot and recovery harness | 003 | standard | isolated images, serialized mutation, recovery proof |
-| OSE-010 | M0 gate review and M1 task decomposition | 001–009 | high + human | all M0 evidence reviewed; ADRs and scoped M1 queue |
+Human direction, 2026-11-27: finish the reusable MVP package development platform before starting new OSE-specific work. Spec §§1.1, 4.1 and 5 define the order; this replaces the previous post-M0 OSE-014 ordering.
 
-Economy tasks may run concurrently on disjoint files. Tasks 003, 004, 006 and 009 must coordinate guest ownership. No M1 implementation until M0 review.
+## Current execution order
 
-## Coordinator additions (OSE-001 and the OSE-002 rework, 2026-11-26; approved by the human 2026-11-26)
+| Stage | Task | Prerequisites | Acceptance |
+|---|---|---|---|
+| M0a, next | OSE-009: generic guest lease, isolation, snapshot/recovery | OSE-003 merged | exclusive leases, configurable ports, independent guest copies, forced-failure restore and corruption rejection |
+| M0a | OSE-014: generic package configuration, shared harness, MVP workflow, two examples and export gate | OSE-009 accepted; accepted inventory/pins/toolchain/build baseline | all spec §5.1 checks; independent clean-checkout repeat; standalone export; independent review and human M0a acceptance |
+| M0b, after M0a | OSE-006: UFSD guest tests | OSE-014 gate; OSE-003/004/005 | existing two-client, persistence, binary and failure tests |
+| M0b, after M0a | OSE-007: identity/security feasibility audit | OSE-014 gate; OSE-002/005 | existing trusted-caller evidence and negative test plan |
+| M0b, after M0a | OSE-008: execution model/runtime audit | OSE-014 gate; OSE-002/004 | target-supported mechanisms and experiment designs |
+| M0b gate | OSE-010: OSE baseline review and M1 queue | M0a plus all existing M0 audit dependencies | all remaining OSE M0 evidence/decisions; human gate approval |
+| M1 onward | OSE subsystem implementation | M0a and M0b | existing milestone gates, including non-waivable M3 multi-user security |
 
-| Task | Scope | Depends | Tier | Why added |
-|---|---|---|---|---|
-| OSE-011 | TSO terminal API and name-collision audit | 002 (003 for guest listing) | economy → standard | spec §10 "terminal APIs"; §3.5 "name subject to collision audit" |
-| OSE-012 | Target C subset and LIBC/370 POSIX inventory | 002 (004 harness for probes) | economy + standard review | spec §10 "target C subset"; §2 "audit existing POSIX functions" |
-
-| OSE-013 | Enforce MVP and RAKF pins (sysgen patch P-01 plus wrapper check) | 002 | standard | OSE-002 review finding 3: a mutable MVP fetch must be enforced, not just recorded. OSE-003 now depends on it |
-
-Clarifications that do not change the dependencies above:
-- OSE-004 compiles on the host after 002, but its guest run needs the image from OSE-003.
-- OSE-010 also depends on 011 and 012.
-- OSE-011's guest listing job also holds a lease.
-
-Each task's full card is `tasks/OSE-NNN-*.md`.
-
-## Dependency graph and parallelism
-
-```
-001 ──> 002 ─┬─> 013 ─> 003 ─┬─> 009
-             │                ├─> 004(guest) ─┬─> 006 <── 005
-             ├─> 004(host) ───────────────────┤
-             ├─> 005 ──> 007                  └─> 008
-             ├─> 011(source) ... 011(guest needs 003)
-             └─> 012(inventory) ... 012(probes need 004)
-all ──> 010 (gate)
+```text
+accepted inventory / pins / build / deploy / toolchain
+                    |
+                 OSE-009
+                    |
+                 OSE-014 -- independent review + human M0a acceptance
+                    |
+          +---------+---------+
+          |         |         |
+       OSE-006   OSE-007   OSE-008
+          +---------+---------+
+                    |
+                 OSE-010 -- human M0b acceptance
+                    |
+                 OSE M1+
 ```
 
-**Wave 1 (after 002):** 013, 004-host, 005, 011-source and 012-inventory can run in parallel on disjoint files. 003 follows 013. 005 and 012 are pure source reading and suit economy or standard tiers.
-**Wave 2 (needs the guest; serialize on the lease):** 004-guest, 009, 011-guest, then 006.
-**Wave 3 (high tier, no guest needed):** 007 after 005; 008 after 004.
+OSE-014 does not depend on OSE-010. Its validated local export may pass the technical gate while external publication awaits a human destination/license/release decision. Existing accepted work is reused, not redone solely to rename it. During M0a, new work must serve generic package development or fix the foundation's safety/reliability. Remaining OSE-specific audits stay BACKLOG, including source-only work. Guest mutations remain serialized under the current lease contract until OSE-009 replaces it through review.
 
-The critical path is 002 → 013 → 003 → 004-guest → 006 → 010. ADR-0003 is accepted (option A). The earliest open decisions are approving OSE-013 and choosing the OSE-002 gate option (docs/status.md).
+## Existing baseline and retained task identities
 
-## Reusable development environment follow-up (human direction, 2026-11-27)
+| Task | Scope | Role |
+|---|---|---|
+| OSE-001 | Repository/docs/task protocol | existing governance |
+| OSE-002 | Upstream inventory/licenses/pins | reusable baseline |
+| OSE-003 | Host doctor, Sysgen, native JES/TSO smoke | reusable baseline |
+| OSE-004 | Toolchain and HELLO build/deploy/runtime proof | reusable baseline/example |
+| OSE-005 | UFSD source/interface audit | accepted OSE evidence; consumed in M0b |
+| OSE-011 | Terminal/name audit and guest listing | accepted OSE evidence; no repeat required solely for scheduling |
+| OSE-012 | C subset/libc inventory and probes | reusable toolchain evidence |
+| OSE-013 | MVP/RAKF pin enforcement | reusable baseline |
 
-OSE-014 tracks the separate repository export after the M0 gate (OSE-010). It prepares a reusable foundation for other MVP package projects, with an actual MVP install test, second independent example and export/license review (spec §5.1). It does not change the existing M0 dependency graph or authorize publication. Reuse boundaries should guide harness work during M0.
+No previous security/UFSD/process requirement is waived by the split. See each card for exact acceptance and docs/status.md for current evidence/state.

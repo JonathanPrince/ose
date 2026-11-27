@@ -1,7 +1,7 @@
 # Project status
 
-Updated: 2026-11-27 by the coordinator (OSE-011 guest listing merged to main on the human maintainer's instruction)
-Milestone: **M0, Reproducible baseline and source audit**: in progress
+Updated: 2026-11-27, platform-first specification amendment at the human request (implementation gates still open)
+Milestone: **M0a, reusable MVP development platform**: in progress; M0b OSE audits follow its acceptance
 Guest lease: none held (released by OSE-011 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004, ose-guest-011, reviewer volumes. The next guest task must take the lease first.
 
 ## Summary
@@ -12,22 +12,29 @@ Merged to main after independent review (2026-11-26):
 - **OSE-005:** UFSD source audit.
 - **OSE-012:** libc370 inventory and compile probes.
 - **OSE-011:** terminal audit (source part) and the guest name-collision listing: no collision for the candidate names on the pinned image (research tso-terminal-audit N-4).
-- **OSE-004:** CC/370 toolchain and a reproducible hello load module, host part. Guest acceptance tests 2–4 are still open.
+- **OSE-004:** reproducible host build, guest deploy/listing, batch RC/output and TSO invocation accepted and merged.
 
-**Guest images now exist.** OSE-003 implementation and an independent clean-build/IPL/JES/TSO repeat have passed their positive checks; the harness has five open review findings. `src/` holds only the OSE-004 test program `src/utils/hello/hello.c`.
+**The generic build/deploy baseline is accepted.** OSE-003/004 findings are closed in merged work. Next: OSE-009 isolation/recovery, then OSE-014 generic packaging/export and M0a acceptance. `src/` holds only the OSE-004 test program `src/utils/hello/hello.c`.
 
-## M0 gate (spec §5) → owning tasks
+## M0a platform gate → owning tasks
 
-| Gate criterion | Tasks | Evidence | State |
-|---|---|---|---|
-| Clean pinned Sysgen build boots twice | 002, 013, 003 | OSE-003 independent repeat: build RC 0, 3181 s, two IPLs 7/9 s, pin receipts | observed; harness changes requested R03-1..R03-5 |
-| Native TSO/JES smoke tests | 003 | independent raw spool BR14=0000, PLANT=0004; MVSCE02 TIME/logoff pass | observed; failure-path harness findings open |
-| Compile/deploy hello | 004 | `make build` reproducible (T-7); `make deploy` + listing job; batch RC 0000/0004 with exact output; TSO CALL (research T-8; runbook hello-compile-deploy) | met (OSE-004 MERGED) |
-| UFSD read/write across two guest clients | 005, 006 | research 2026-11-26-ufsd-audit (source only) | source audit VERIFIED; guest tests not started |
-| Dependency/license inventory | 002, 004 | dependencies.lock.json (39 components, 2 excluded, pending_enforcement empty); real pin receipts from author and independent OSE-003 builds | guest component pin proof observed; s3270 pin and build-host ADR reconciliation requested |
-| Actual interfaces documented | 005, 007, 008, 011, 012 | docs/interfaces/ufsd-observed.md; research -ufsd-audit, -libc370-inventory, -tso-terminal-audit | partial (005, 011 source part, 012 done; 007, 008 not started) |
-| Recovery documented | 009 | | not started |
-| Spec §10 questions answered (versions, build host, terminal APIs, C subset, RAKF baseline, macros, UFSD identity) | 002, 003, 011, 012, 007, 008, 005 | versions and RAKF baseline (OSE-002); build host (ADR-0003); terminal APIs (OSE-011); C subset (OSE-012); UFSD identity: client-asserted, not verified (OSE-005 U-3) | partial (RAKF and SSI identity: OSE-007) |
+| Gate criterion | Tasks | Evidence/state |
+|---|---|---|
+| Pinned host/guest builds; repeated IPL/JES/TSO; reproducible HELLO deploy and runtime | 002, 003, 004, 012, 013 | accepted baseline evidence retained; independent clean-checkout platform repeat still required by 014 |
+| Generic leases, isolated ports/volumes, snapshot/restore and corruption rejection | 009 | READY; implementation/acceptance not run |
+| Package configuration and shared harness; real MVP package install/runtime/recovery | 014 | BACKLOG, waits for 009; XMIT RECEIVE alone is insufficient |
+| Second independent example through unchanged shared harness | 014 | not run |
+| Standalone export, dependency rights/provenance, version and OSE consumption plan | 014 | not run; no publication authorization implied |
+| Independent review and human M0a acceptance | 014 | pending; required before new OSE-specific work |
+
+## M0b OSE gate → owning tasks (after M0a)
+
+| Gate criterion | Tasks | Evidence/state |
+|---|---|---|
+| UFSD read/write across two guest clients, persistence and failures | 005, 006 | source audit accepted; 006 waits for M0a |
+| Trusted identity, alternate access paths and OSE security feasibility | 005, 007 | known gaps retained; 007 waits for M0a |
+| Execution mechanisms/runtime feasibility and actual OSE interfaces | 008, 011, 012 | 011/012 accepted evidence; 008 waits for M0a |
+| Remaining M0 questions, UFSD/toolchain/process decisions and M1 decomposition | 010 | requires M0a and OSE audits; no security requirement waived |
 
 ## Task board
 
@@ -38,14 +45,15 @@ Merged to main after independent review (2026-11-26):
 | OSE-003 | Build host doctor and sysgen | MERGED (VERIFIED at 85414c2; ADR-0006 accepted) | standard | coordinator |
 | OSE-004 | CC/370 + MBT hello | MERGED (VERIFIED; host and guest parts) | standard | coordinator |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
-| OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
-| OSE-007 | RAKF/SSI identity audit | BACKLOG (OSE-005 escalations G-1, G-2, G-11, G-12 waiting) | high | — |
-| OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
-| OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
-| OSE-010 | M0 gate review | BACKLOG | high and human | — |
+| OSE-006 | UFSD cross-space tests | BACKLOG (M0b; waits for M0a/014) | standard | — |
+| OSE-007 | RAKF/SSI identity audit | BACKLOG (M0b; waits for M0a/014; existing escalations retained) | high | — |
+| OSE-008 | Execution model and runtime audit | BACKLOG (M0b; waits for M0a/014) | high | — |
+| OSE-009 | Generic guest lease, snapshot, recovery | READY (M0a; next implementation task) | standard | — |
+| OSE-010 | M0b OSE gate review | BACKLOG (after M0a and OSE audits) | high and human | — |
 | OSE-011 | TSO terminal and name audit | MERGED (VERIFIED; source part and guest listing: no name collision) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
+| OSE-014 | Reusable MVP platform and M0a export gate | BACKLOG (after 009; before OSE-specific work) | standard + independent/human gate | — |
 
 ## Decisions needed from the human
 Resolved 2026-11-26:
@@ -74,9 +82,9 @@ Resolved 2026-11-26:
 - The toolchain macros (maclib370) come from TK5, not MVS/CE. Whether libc370 built against them runs correctly on MVS/CE needs a guest run (OSE-004 T-1).
 
 ## Next actions
-1. **Critical path: OSE-003 rework.** Independent test 6 passed, but R03-1..R03-5 need fixes and re-review. The reviewed branch has completed the real pin proof and removed pending_enforcement; align the dependency decision and pin s3270 before merge.
-2. After OSE-003: the OSE-011 guest listing, the OSE-004 guest acceptance tests 2–4, and the OSE-006 UFSD guest tests.
-3. In parallel, at high tier: OSE-007, starting from the OSE-005 escalations, and OSE-008.
+1. Claim OSE-009: build and independently verify generic guest isolation, leases and recovery against the accepted baseline.
+2. Complete OSE-014: separate package configuration from shared tooling, implement actual MVP packaging/install tests and a second example, validate the standalone export, then obtain independent review and human M0a acceptance.
+3. After M0a, start OSE-006/007/008 using that platform, then OSE-010 for the remaining M0b/OSE gate and M1 queue. Existing security requirements remain mandatory. Repository publication remains a separate human decision.
 
 ## Review log
 Entries written by the independent reviewer, kept verbatim. The round-2 OSE-013 entry ("not VERIFIED; awaiting check") was superseded by the round-3 entry below.
@@ -102,7 +110,7 @@ Reviewed b5cbb7d: 44 host tests (35 pass, 9 skipped), healthy real-tree read-onl
 
 85414c2 VERIFIED: R03-1 fail-open path closed, independent missing/invalid patch cases now return 10, host suite 41 passed/9 skipped, and no new findings. R03-2..5 and runtime evidence remain accepted from prior reviews; ADR-0006 is recorded accepted by the human. No new guest run or lease. Human owns integration.
 
-## Reusable development environment direction — 2026-11-27
+## Reusable development environment direction — 2026-11-27 (historical; superseded by platform-first amendment below)
 
 The human requested a separate repository that reuses the M0 development foundation for other MVS/CE MVP package projects. Spec §§1.1/4.1/5.1 now define the boundary and export gate; OSE-014 is BACKLOG after the existing M0 gate, independent of M1–M5. Export acceptance requires clean independent reproduction, a real MVP package installation, a second example using shared harness code, recovery/evidence checks, license/provenance review and a versioned OSE consumption plan. Extraction and publication have not started; repository destination and release remain human decisions. Existing M0 security gates remain in force.
 
@@ -125,3 +133,7 @@ Reviewed 6880303 on `review/OSE-011-guest-r1`: positive guest acceptance indepen
 ## OSE-011 final focused re-review — 2026-11-27
 
 5815701 VERIFIED on `review/OSE-011-guest-r3`: R11G-2 closed, no new findings. Full Windows host suite RC0: 81 passed/9 skipped, including all previously failing Git admission fixtures; independent native git-init probe RC0 before and after replay tests. Prior independent guest listing and R11G-1 closure remain accepted, evidence unchanged (25/25 prior reviewer hashes verified). No new guest work/lease, dependency change, merge or push. See task card for exact commands/evidence and scope. Human integration pending.
+
+## Platform-first sequencing amendment — 2026-11-27
+
+The human requested the generic MVP development platform before further OSE-specific tasks. This supersedes the earlier “OSE-014 after OSE-010” planning entry above: OSE-009 → OSE-014/M0a → OSE-006/007/008 → OSE-010/M0b → M1. Completed audits and review records remain evidence. Only documentation/task sequencing changed; no new gate acceptance, guest run, export or publication is claimed.
