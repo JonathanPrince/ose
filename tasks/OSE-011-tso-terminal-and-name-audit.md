@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: REVIEW (source part accepted; guest collision listing remains open)
+Status: IMPLEMENTED (source part accepted 2026-11-26; guest listing, acceptance test 2, done 2026-11-27 on task/OSE-011-guest; awaiting independent review)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -64,3 +64,28 @@ Reviewer: Codex, high tier (escalated re-review following prior changes request)
 Source part accepted. R11-1 resolved: the job now includes SYSC.PROCLIB, SYSC.LINKLIB, BREXX.LINKLIB, SYS1.CMDPROC, SYS2.EXEC and the other documented concatenation members, prints configuration members and requires checking configured DSNs against its LIST coverage before recording a collision result. Rechecked against pinned sysgen jcl/brexxcfg.jcl:21-26, jcl/mvs00.jcl:136-151 and jcl/sysgen05.jcl:526-537. Python assertions confirmed the previously missing LISTDS commands, ASCII-only JCL and <=71 columns (RC 0). Guest RC parsing, effective configuration confirmation and final collision table remain acceptance test 2; no guest listing or terminal exercise ran. Therefore the complete task is not VERIFIED.
 
 Validation in this worktree: `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 repository tests passed. No guest mutation, dependency change, merge or release. Human owns integration; this review does not alter other task branches.
+
+### Guest part, 2026-11-27 (author: coordinator session, standard tier)
+Branch `task/OSE-011-guest` from main 7146aed. Lease: volume `ose-guest-011` (a new copy of `ose-sysgen-1`), taken 2026-11-27T14:19:36Z and released after the last container exited. Evidence: `artifacts/evidence/ose-011/guest/` (not in Git). `SHA256SUMS` there has 20 entries; its own SHA-256 is `e2a9b1b969884818a397c7e99906f0f7223fecfb7fca37f014fe72b72e73f72b`.
+
+**Acceptance test 2: closed.** Final run `DASD_VOLUME=ose-guest-011 sh scripts/audit-listing.sh` → **RC 0** (`runs/20261127T142904Z-1520/`). Step RCs: CFGLNK, CFGAPF, CFGJES, CFGTSO, CFGLOG `0000`; CFGSSN `0004` (HMBLIST AMB126I, listing produced); LIST `0004` (LISTCAT of the absent HLQ `OSE`). 32 libraries, 3825 member and alias names, nothing unparsed. **No collision for OMVS, OSH, OSE, OSED, OSE1 or OSES**; no name even starts with one of them. HLQ `OSE` has no data set and no alias. The table and residual risks are in research N-4.
+
+| Run | RC | What it showed / changed |
+|---|---|---|
+| 1 `runs/20261127T142139Z-2168` | 1 | `SYS1.PARMLIB(IEFSSN00)` does not exist on 3.8j (S013-18). Without `COND=EVEN` all later steps, including LIST, were skipped. → CFGSSN dumps load module IEFJSSNT (SYS1.LINKLIB) with HMBLIST; every step `COND=EVEN` |
+| 2 `runs/20261127T142354Z-1085` | 1 | All steps ran. The driver was too strict (RC 4 of HMBLIST and LISTCAT, both expected) and the parser missed aliases. The **completeness check** found 7 configured libraries missing from the job (ISF.LINKLIB, ISF.ISFCLST, SYSGEN.NJE38.AUTHLIB, SYS1.VTAMLIB, SYS1.INDMAC, SYS1.HELP, SYS2.HELP) plus `&SYSUID` libraries → job extended; alias parser; CFG* 0-4 |
+| 3 `runs/20261127T142722Z-111` | 0 | Extended job. Unquoted `LISTDS CLIST` is not prefixed in batch TSO → the runner qualifies `&SYSUID` libraries with the user ID |
+| 4 `runs/20261127T142904Z-1520` | 0 | Final. `MVSCE02.CLIST` and `.EXEC` exist and are empty; every DSN named in the configuration printouts is listed |
+
+Files:
+- changed: `jcl/audit/list-libraries.jcl` (IEFJSSNT via HMBLIST, `COND=EVEN`, 9 more libraries, header), `docs/research/2026-11-26-tso-terminal-audit.md` (N-3 corrected, N-4 new);
+- new: `scripts/audit-listing.sh`, `tests/guest/audit/run_listing.py`, `tests/host/test_audit_listing.py` (10 tests);
+- changed `scripts/lib/common.sh` and `scripts/deploy.sh`: `guest_run`, `MANIFEST` and `export_evidence` moved from `deploy.sh` into `common.sh` (`guest_run` is the former `guest()` with the script as a parameter), so this listing uses the same verified evidence export. The OSE-004 fake-docker tests pass unchanged.
+
+The scripts, the common.sh move and the test file are outside this card's file list; the reviewer should check them.
+
+Host: `python -I scripts/check_repo.py` RC 0; `python -m unittest discover -s tests/host` RC 0.
+
+Still open (not part of acceptance 2): the terminal probes (TGET ASIS, TPUT FULLSCR, STAX) from a CC/370 program, now possible with the OSE-004 deploy path; the TSO macro manual form numbers.
+
+Next action: independent review of the guest part; then the human decides on the merge.

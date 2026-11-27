@@ -2,7 +2,7 @@
 
 Updated: 2026-11-27 by the coordinator (OSE-004 guest part merged to main on the human maintainer's instruction; reusable-MVP spec direction cherry-picked)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
-Guest lease: none held (released by the OSE-004 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004 (OSE-004 deploy target), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
+Guest lease: none held (released by OSE-011 guest listing, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004, ose-guest-011, reviewer volumes. The next guest task must take the lease first.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -43,7 +43,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | REVIEW, source part MERGED (accepted); guest listing pending OSE-003 | economy → standard | — |
+| OSE-011 | TSO terminal and name audit | IMPLEMENTED (source part accepted; guest listing done 2026-11-27: no collision; awaiting review) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 
