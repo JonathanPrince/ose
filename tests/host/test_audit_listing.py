@@ -113,5 +113,142 @@ class SsnTable(unittest.TestCase):
         self.assertEqual(rl.ssn_table("no listing here"), {"found": False})
 
 
+USER = "TUSER"
+DSNS = rl.listds_commands(rl.qualify_user_libraries(JCL, USER))
+
+
+def full_spool(skip=(), extra_member=None, ssn="complete", catalog=True, denied=None):
+    """A complete synthetic spool for the job (formats as observed on MVS/CE),
+    with optional damage for the replay tests."""
+    out = []
+    if ssn != "absent":
+        body = "40" * 16 + ("FFFFFFFF" if ssn == "complete" else "40404040") + "40" * 12
+        rows = [f"            {o // 2:06X}    " + " ".join(body[o + i:o + i + 8] for i in range(0, 64, 8)).strip()
+                for o in range(0, len(body), 64)]
+        out += ["                     LISTING OF LOAD MODULE IEFJSSNT        PAGE 0001", *rows,
+                " ******END OF LOAD MODULE LISTING"]
+    for d in DSNS:
+        if d in skip:
+            continue
+        out.append(f" LISTDS '{d}' MEMBERS")
+        if d == denied:
+            out.append("IKJ56225I DATA SET NOT ALLOCATED, AUTHORIZATION FAILURE")
+            continue
+        out += [d, "--RECFM-LRECL-BLKSIZE-DSORG", "  U     **    19069   PO", "--VOLUMES--", "  MVSRES",
+                "--MEMBERS--", "  IEFBR14", "  IKJEHDS1  ALIAS(LISTD,LISTDS)"]
+        if extra_member and d == "SYS1.CMDLIB":
+            out.append(extra_member)
+    if catalog:
+        out += [" LISTCAT LEVEL(OSE) ALL", "IDC3012I ENTRY OSE. NOT FOUND+", "IDC0014I LASTCC=4",
+                " LISTCAT ENTRIES('OSE') ALL", "IDC3012I ENTRY OSE NOT FOUND+", "IDC0014I LASTCC=4"]
+    out.append("END")
+    return "\n".join(out) + "\n"
+
+
+class EvidenceGate(unittest.TestCase):
+    """Review R11-G1: incomplete evidence must make the audit fail."""
+
+    def problems(self, **damage):
+        return rl.analyse(full_spool(**damage), DSNS)["evidence_problems"]
+
+    def test_complete_spool_has_no_problems(self):
+        r = rl.analyse(full_spool(), DSNS)
+        self.assertEqual(r["evidence_problems"], [])
+        self.assertEqual(r["catalog"], {"level": "not found", "entries": "not found"})
+
+    def test_unparsed_member_line(self):
+        p = self.problems(extra_member="  this is not a member line")
+        self.assertTrue(any("SYS1.CMDLIB" in x and "unparsed" in x for x in p), p)
+
+    def test_missing_subsystem_dump(self):
+        self.assertTrue(any("IEFJSSNT" in x for x in self.problems(ssn="absent")))
+
+    def test_truncated_subsystem_dump(self):
+        self.assertTrue(any("IEFJSSNT" in x and "incomplete" in x for x in self.problems(ssn="no-end-marker")))
+
+    def test_missing_library_section(self):
+        self.assertTrue(any("SYS1.LPALIB" in x for x in self.problems(skip=("SYS1.LPALIB",))))
+
+    def test_access_denied_library_is_not_searched(self):
+        p = self.problems(denied="SYSC.LINKLIB")
+        self.assertTrue(any("SYSC.LINKLIB" in x and "LISTDS failed" in x for x in p), p)
+
+    def test_absent_library_is_evidence_not_a_gap(self):
+        spool = full_spool().replace(f" LISTDS '{USER}.CLIST' MEMBERS\n{USER}.CLIST",
+                                     f" LISTDS '{USER}.CLIST' MEMBERS\nIKJ58503I DATA SET {USER}.CLIST NOT IN CATALOG")
+        self.assertEqual(rl.analyse(spool, DSNS)["evidence_problems"], [])
+
+    def test_missing_catalog_result(self):
+        self.assertTrue(any("catalog" in x for x in self.problems(catalog=False)))
+
+
+class MainReplay(unittest.TestCase):
+    """Replays a spool through main() with a fake Hercules: the driver's exit
+    code must reflect the evidence gate, not only the step RCs."""
+
+    def replay(self, spool):
+        import importlib.util as iu
+        import os
+        import sys
+        import tempfile
+        import shutil
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "printers").mkdir()
+        rcs = "".join(f"IEF142I OSELIST {s} - STEP WAS EXECUTED - COND CODE {c}\n"
+                      for s, c in [(s, "0000") for s in rl.CFG_STEPS] + [("LIST", "0004")])
+        (tmp / "printers" / "prt00e.txt").write_text(rcs + spool, encoding="latin-1")
+
+        def real(name, path):
+            s = iu.spec_from_file_location(name + "_replay", path)
+            m = iu.module_from_spec(s)
+            s.loader.exec_module(m)
+            return m
+        smoke = real("mvs_smoke", ROOT / "scripts" / "lib" / "mvs-smoke.py")
+        hg = real("hello_guest", ROOT / "tests" / "guest" / "hello" / "hello_guest.py")
+        hg.submit_ebcdic = lambda data, port=3506: None
+        shutdown = ["$HASP099 ALL AVAILABLE FUNCTIONS COMPLETE", "$HASP085 JES2 TERMINATION COMPLETE",
+                    "IEE334I HALT     EOD SUCCESSFUL"]
+
+        class FakeHerc:
+            def __init__(self, *a):
+                self.console, self.quit_fallback, self.stop_mark, self.exited_early = [], False, None, False
+
+            def wait(self, pattern, timeout):
+                return "simulated"
+
+            def send(self, cmd):
+                pass
+
+            def stop(self):
+                self.stop_mark = len(self.console)
+                self.console += shutdown
+                return 0
+        smoke.Herc = FakeHerc
+        mod = real("run_listing", ROOT / "tests" / "guest" / "audit" / "run_listing.py")
+        mod.JCL = ROOT / "jcl" / "audit" / "list-libraries.jcl"
+        mod.load = lambda name, path: {"mvs_smoke": smoke, "hello_guest": hg}[name]
+        argv, env = sys.argv, dict(os.environ)
+        sys.argv = ["run_listing.py", "--mvsce", str(tmp), "--evidence", str(tmp / "ev")]
+        os.environ.update(GUEST_USER=USER, GUEST_PASS="SECRET1")
+        try:
+            mod.main()
+        except SystemExit as e:
+            return e.code
+        finally:
+            sys.argv = argv
+            os.environ.clear()
+            os.environ.update(env)
+
+    def test_complete_replay_passes(self):
+        self.assertEqual(self.replay(full_spool()), 0)
+
+    def test_unparsed_line_fails_the_run(self):
+        self.assertEqual(self.replay(full_spool(extra_member="  garbage here")), 1)
+
+    def test_missing_subsystem_dump_fails_the_run(self):
+        self.assertEqual(self.replay(full_spool(ssn="absent")), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

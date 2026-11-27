@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: REVIEW (source portion accepted; guest listing independently reproduced at 6880303; changes requested R11G-1 for incomplete-evidence success)
+Status: IMPLEMENTED (source part accepted; guest listing done 2026-11-27; R11-G1 fixed 2026-11-27; awaiting re-review)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -115,3 +115,22 @@ The extra runner, shared helper extraction and tests are reasonable scope extens
 Manual lease held before clone/run on disposable `ose-review-011-20261127`, copied from the stopped independent reviewer baseline `ose-sysgen-review-003-20261127`. No author volume mounted. One cold IPL/clean shutdown; all containers stopped, lease released; reviewer volume retained stopped. Reviewer evidence/fixtures are under `artifacts/evidence/review-ose-011/`. Next action: fix R11G-1 and its negative regressions, escalate rework per task conventions, then request focused re-review. Human owns integration.
 
 Review evidence manifest: `artifacts/evidence/review-ose-011/REVIEW-SHA256SUMS`, 23 files; SHA-256 `4dd32b3cbc87dfbaffb61c570b78965bae3b46670c29297df94d4f8a50c68a4a`.
+
+### Rework after review r1 (R11-G1), 2026-11-27, author
+Baseline: review/OSE-011-guest-r1 at 1486848 (fast-forwarded). Lease on `ose-guest-011`, taken 14:49:39Z and released after the last container exited. New evidence: `runs/20261127T144940Z-268/`, covered by `SHA256SUMS-rework-r1` (5 entries, `ebbcc8244cd8f2e9f68ff7ecaa69334c8dcd13280b30cd106cd39c0a7160dc3b`). The first-round `SHA256SUMS` is unchanged.
+
+**Finding (P2):** the driver returned success with unparsed member lines or without the subsystem dump. **Fix:** `run_listing.py` has one `analyse()` used by `main()` and the tests, and `evidence_problems()` turns each gap into a failure (RC 1, `EVIDENCE INCOMPLETE: …` and `evidence_problems` in the result):
+- a library without LISTDS output;
+- a LISTDS error other than "NOT IN CATALOG". An absent library is evidence; access denied means the library was not searched;
+- any unparsed member line;
+- no IEFJSSNT listing, or one with no bytes or no `X'FFFFFFFF'` end marker;
+- no result for either `LISTCAT` of HLQ `OSE` (new `catalog_result()`). Without it, "HLQ free" has no evidence.
+
+| Check | RC | Result |
+|---|---|---|
+| `python -m unittest tests.host.test_audit_listing` | 0 | 21 tests. New: 8 evidence-gate cases on altered synthetic spools, and 3 replays through `main()` with a fake Hercules (complete → 0; unparsed line → 1; no IEFJSSNT → 1) |
+| the 3 `main()` replays against the reviewed driver 6880303 | — | complete passes; **both damaged replays return 0**, reproducing the finding |
+| guest `DASD_VOLUME=ose-guest-011 sh scripts/audit-listing.sh` | 0 | same result as before; `evidence_problems` empty; catalog `level` and `entries` both "not found"; export verified |
+| `python -I scripts/check_repo.py`; `python -m unittest discover -s tests/host` | 0, 0 | |
+
+Next action: re-review of R11-G1; then the human decides on the merge.

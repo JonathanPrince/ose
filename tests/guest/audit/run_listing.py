@@ -22,6 +22,7 @@ from pathlib import Path
 
 LIB = Path("/ose/scripts/lib")
 JCL = Path("/ose/jcl/audit/list-libraries.jcl")
+HELLO_GUEST = Path("/ose/tests/guest/hello/hello_guest.py")   # OSE-004 deck and spool helpers
 CANDIDATES = {"command": ["OMVS", "OSH"], "hlq": ["OSE"], "stc": ["OSE", "OSED"], "subsystem": ["OSE1", "OSES"]}
 CFG_STEPS = ["CFGLNK", "CFGAPF", "CFGSSN", "CFGJES", "CFGTSO", "CFGLOG"]
 
@@ -129,6 +130,67 @@ def listds_sections(text: str, dsns: list) -> dict:
     return out
 
 
+def catalog_result(text: str, hlq="OSE") -> dict:
+    """Outcome of the job's two LISTCAT commands for the HLQ: 'not found',
+    'found' or None (no output, so no evidence either way)."""
+    out = {}
+    for key, cmd in (("level", rf"LISTCAT LEVEL\({hlq}\) ALL"), ("entries", rf"LISTCAT ENTRIES\('{hlq}'\) ALL")):
+        m = re.search(rf"^\s*{cmd}\s*$(.*?)(?=^\s*(?:LISTCAT|LISTDS) |^\s*END\s*$|\Z)", text, re.M | re.S)
+        if not m:
+            out[key] = None
+        elif re.search(rf"IDC3012I ENTRY {hlq}\.? NOT FOUND", m.group(1)):
+            out[key] = "not found"
+        elif re.search(r"NONVSAM|ALIAS|CLUSTER|USERCATALOG", m.group(1)):
+            out[key] = "found"
+        else:
+            out[key] = None
+    return out
+
+
+def evidence_problems(sections: dict, ssn: dict, catalog: dict) -> list:
+    """Why the audit evidence is incomplete (review R11-G1); empty when complete.
+    A collision verdict is only as good as the listing behind it."""
+    problems = []
+    for dsn, (kind, detail) in sections.items():
+        if kind == "missing":
+            problems.append(f"{dsn}: no LISTDS output")
+        elif kind == "error" and not any("NOT IN CATALOG" in d for d in detail):
+            problems.append(f"{dsn}: LISTDS failed: {detail[:2]}")   # e.g. access denied: not searched
+        elif kind == "members":
+            bad = [n for n in detail if n.startswith("?")]
+            if bad:
+                problems.append(f"{dsn}: {len(bad)} unparsed member line(s), first {bad[0]!r}")
+    if not ssn.get("found"):
+        problems.append("IEFJSSNT: no HMBLIST listing in the spool")
+    elif ssn.get("bytes", 0) == 0 or ssn.get("end_marker_offset", -1) < 0:
+        problems.append(f"IEFJSSNT: listing incomplete (bytes {ssn.get('bytes')}, "
+                        f"end marker {ssn.get('end_marker_offset')})")
+    for key, v in catalog.items():
+        if v is None:
+            problems.append(f"catalog: no result for LISTCAT {key}")
+    return problems
+
+
+def analyse(text: str, dsns: list) -> dict:
+    """Everything the audit concludes from the spool, including why its evidence
+    would be incomplete. main() and the host replay tests both call this."""
+    sections = listds_sections(text, dsns)
+    members = {d: m for d, (k, m) in sections.items() if k == "members"}
+    ssn = ssn_table(text)
+    catalog = catalog_result(text)
+    return {
+        "libraries": {d: {"kind": k, "count": len(m) if k == "members" else None,
+                          "detail": m if k != "members" else None} for d, (k, m) in sections.items()},
+        "members": members,
+        "collisions": collisions(sections),
+        "unparsed_lines": {d: [n for n in m if n.startswith("?")] for d, m in members.items()
+                           if any(n.startswith("?") for n in m)},
+        "ssn_table": ssn,
+        "catalog": catalog,
+        "evidence_problems": evidence_problems(sections, ssn, catalog),
+    }
+
+
 def collisions(sections: dict) -> list:
     rows = []
     names = sorted({n for v in CANDIDATES.values() for n in v})
@@ -147,7 +209,7 @@ def main():
     ev = args.evidence
     ev.mkdir(parents=True, exist_ok=True)
     smoke = load("mvs_smoke", LIB / "mvs-smoke.py")
-    hg = load("hello_guest", Path("/ose/tests/guest/hello/hello_guest.py"))
+    hg = load("hello_guest", HELLO_GUEST)
     template = qualify_user_libraries(JCL.read_text(encoding="ascii"), user)
     dsns = listds_commands(template)
     result = {"user": user, "jcl": str(JCL), "listds": dsns}
@@ -184,20 +246,16 @@ def main():
             and got.get("LIST") is not None and int(got["LIST"]) <= 12
         print(f"OSELIST step RCs {rcs} -> {'ok' if rc_ok else 'UNEXPECTED'}")
         ok &= rc_ok and not result["failures"]
-        sections = listds_sections(text, dsns)
-        result["libraries"] = {d: {"kind": k, "count": len(m) if k == "members" else None,
-                                   "detail": m if k != "members" else None} for d, (k, m) in sections.items()}
-        result["members"] = {d: m for d, (k, m) in sections.items() if k == "members"}
-        result["collisions"] = collisions(sections)
-        result["unparsed_lines"] = {d: [n for n in m if n.startswith("?")] for d, m in result["members"].items()
-                                    if any(n.startswith("?") for n in m)}
-        result["ssn_table"] = ssn_table(text)
+        result.update(analyse(text, dsns))
         print(f"  IEFJSSNT: {result['ssn_table']}")
-        for d, (k, m) in sections.items():
-            print(f"  {d:24} {k:8} {len(m) if k == 'members' else m}")
+        for d, v in result["libraries"].items():
+            print(f"  {d:24} {v['kind']:8} {v['count'] if v['kind'] == 'members' else v['detail']}")
         for r in result["collisions"]:
             print(f"  candidate {r['name']:5} {r['kinds']} found in {r['found_in'] or 'none'}")
-        ok &= all(k != "missing" for k, _ in sections.values())
+        print(f"  catalog OSE: {result['catalog']}")
+        for p in result["evidence_problems"]:
+            print(f"  EVIDENCE INCOMPLETE: {p}")
+        ok &= not result["evidence_problems"]
     except Exception as e:  # noqa: BLE001
         ok = False
         result["error"] = str(e)
