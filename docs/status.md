@@ -35,7 +35,7 @@ Merged to main after independent review (2026-11-26):
 |---|---|---|---|---|
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
-| OSE-003 | Build host doctor and sysgen | IMPLEMENTED (R03-1..R03-5 fixed 2026-11-27 with regression tests and guest reruns; awaiting re-review; ADR-0006 proposed) | standard | coordinator |
+| OSE-003 | Build host doctor and sysgen | REVIEW (b5cbb7d re-review: R03-1 remains; R03-2..5 technical fixes accepted; ADR-0006 proposed) | standard | coordinator |
 | OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 pending OSE-003 | standard | — |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
@@ -93,3 +93,7 @@ Host portion accepted at 0d13ac2: R04-1 closed by independent complete worktree 
 ## OSE-003 independent review — 2026-11-27
 
 Test 6 completed: fresh worktree/new volume; fetch/doctor/build/smoke RC 0; Hercules 293/293; Sysgen attempt 1 in 3181 s; cold IPLs 7 and 9 s; raw JES2 RCs 0000/0004; non-admin TIME/logoff; both shutdowns clean. Changes requested R03-1..R03-5 (resume source pin, doctor status, shutdown evidence, stale smoke handshake, s3270 pin). See task card and ignored review evidence. Lease released after containers exited; no author volume changed.
+
+## OSE-003 re-review — 2026-11-27
+
+Reviewed b5cbb7d: 44 host tests (35 pass, 9 skipped), healthy real-tree read-only admission and pins pass, doctor passes, two consecutive guest smoke cycles pass (four IPLs 9/9/8/9 s, JES2 0000/0004 and TSO twice, clean ordered shutdowns). Two additional missing/invalid expected-patch cases expose the remaining fail-open verifier (R03-1 P1): failed git apply is ignored and an unpatched tree is admitted. R03-2..5 technical fixes accepted. ADR-0006 is still proposed. Changes requested; lease released, author volumes untouched. See task card and review/OSE-003-r2 evidence.
