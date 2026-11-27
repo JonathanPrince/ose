@@ -107,4 +107,21 @@ The spec §3.2 constructs (fixed-width types and explicit packing) are available
   - Directory entry: `entry=0000C8 modlen=72880`, `ATR1=02 ATR2=C2 AC=00`. file370 decodes this as `[EXEC AC=0]`: **not RENT and not REUS**, which is ld370's default since cc370#100, and not authorized.
   - The XMIT names `IBMUSER.HOST.LOAD` as its origin data set. This is a header field only; RECEIVE chooses the target.
 - **AMODE/RMODE:** the MVS 3.8j PDS directory entry that file370 decodes carries no AMODE/RMODE fields (observed in the decode above). On MVS/370, everything is 24-bit (hypothesis to confirm with an IBM manual). For acceptance test 5, OSE records "not applicable on the target".
-- **Still open:** acceptance 2–4 (deploy, batch RC/output, TSO run) need the OSE-003 guest, a lease, and the deploy-transport decision (T-6). So do the runtime C dialect checks.
+- **Still open (superseded by T-8):** acceptance 2–4 (deploy, batch RC/output, TSO run) needed the OSE-003 guest, a lease, and the deploy-transport decision (T-6).
+
+## T-8 Guest addendum (2026-11-27, OSE-004 acceptance 2-5 on MVS/CE built by OSE-003)
+Environment: volume `ose-guest-004` (a copy of `ose-sysgen-1`, sysgen `4746195d` + P-01), Hercules `ose-hercules:4.9.1-ee86c4de`, user MVSCE02 (not an administrator). Evidence: `artifacts/evidence/ose-004/guest/` (not in Git).
+
+| Item | Finding | Label |
+|---|---|---|
+| Deploy transport | The XMIT's 1090 raw 80-byte EBCDIC records go in-stream behind `DD DATA,DLM=` in a deck sent untranslated to the EBCDIC reader `001A` (`localhost:3506`, `sockdev ... ebcdic` in `conf/local.cnf`). IEBGENER stages it as FB/80, then TSO `RECEIVE` (in batch, IKJEFT01) unpacks it. This is the method upstream sysgen uses for the mvslovers products (`sysgen.py submit_binary`, `mvslovers.py stage_parts`). **No FTPD and no mvsMF**, so the T-6 alternate access path is not used. | observed |
+| RECEIVE | `NJE38 RECEIVE v2.3.0`, "Receiving 'IBMUSER.HOST.LOAD' from ORIGNODE(IBMUSER)", "Receive into 'MVSCE02.OSE.LOAD' successful". It works for the non-admin MVSCE02 in batch. The library is cataloged in user catalog `UCPUB000` through the MVSCE02 alias, on volume PUB000, RECFM U, BLKSIZE 15040, DSORG PO. | observed |
+| TK5-derived macros (T-1 risk) | The load module built against maclib370 runs on MVS/CE in batch and under TSO; no ABEND in 4 batch jobs (8 HELLO steps) and 4 TSO CALLs. This is not a full macro audit: only the paths hello uses ran. | observed |
+| Entry and return code | `EXEC PGM=HELLO` with no PARM: step RC `0000`. `PARM='4'`: `0004` (IEF142I and IEFACTRT). So `main`'s return value reaches the step condition code, and the PARM reaches `argv[1]`. | observed |
+| stdout | libc370 opens `*SYSPRINT` lazily (`src/stdio/@@stdlz.c`). In batch, `//SYSPRINT DD SYSOUT=*` receives exactly `OSE-004 HELLO RC=0` / `RC=4`. Under TSO, a plain `CALL 'MVSCE02.OSE.LOAD(HELLO)' '7'` prints `OSE-004 HELLO RC=7` on the terminal, then `READY`; no `ALLOC F(SYSPRINT) DA(*)` was needed. | observed |
+| varargs at runtime | `printf("... %d\n", rc)` formats correctly: the runtime path of C varargs that hello uses works. The other T-4 constructs were not run on the guest (no runtime probes). | observed (printf only) |
+| EBCDIC code page | Decks are built in cp037 (as upstream mvslovers.py). The Hercules printer file reads back as the expected ASCII text. The in-guest code page of libc370 itself is not examined here. | observed (transport only) |
+| AMODE/RMODE | Not applicable on MVS 3.8j (T-7). | documented |
+| Re-deploy | A re-deploy deletes `MVSCE02.OSE.LOAD` first and must then see it gone: `LISTCAT` CC 4 in step GONE, else STAGE, RECV and CLEANUP are skipped and the deploy fails. Once (2026-11-27 07:12 guest time) the IDCAMS DELETE of the existing library reported `IKJ56228I ... NOT IN CATALOG OR CATALOG CAN NOT BE ACCESSED`, and RECEIVE then wrote into the existing library. Not reproduced since: three later deletes of an existing library worked (`IDC0550I ... DELETED`). Cause unknown; the GONE check makes it fail closed if it recurs. | observed, cause open |
+
+Still open: runtime C dialect probes on the guest (OSE-012 p01-p08) and the TSO return code of `CALL`, which TSO does not display.

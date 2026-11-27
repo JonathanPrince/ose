@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: REVIEW (host portion accepted by independent re-review and merged to main 2026-11-26 on the human maintainer's instruction; guest acceptance 2-4 remain open)
+Status: IMPLEMENTED (host part merged 2026-11-26; guest acceptance 2-5 passed 2026-11-27 on task/OSE-004-guest; awaiting independent review of the guest part)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner: author model (standard tier)
@@ -55,6 +55,37 @@ mvslovers/cc370, libc370 and mbt at their pins, and their docs at mvslovers.read
   - Debian packages are not snapshot-pinned.
 - Next action: standard-tier review of the host part. After OSE-003: choose a deploy transport, write `scripts/deploy.sh`, `jcl/hello/*` and `tests/guest/hello/*`, then run acceptance 2–4 under a lease.
 - Usage/cost if available: not metered.
+
+### Guest part, 2026-11-27 (author: coordinator session, standard tier)
+Branch `task/OSE-004-guest` from main 3658ace (OSE-003 merged). Lease: volume `ose-guest-004`, a copy of `ose-sysgen-1`, taken 2026-11-27T12:07:47Z and released after the last container exited. Evidence: `artifacts/evidence/ose-004/guest/` (not in Git). `SHA256SUMS` there has 64 entries; its own SHA-256 is `f3c47c45943cbf7c3906a69b0bd01a8f6a998ac0de306aae155424f97f0d514e`.
+
+**Deploy transport decision (T-6):** a binary EBCDIC deck to the card reader `001A` (port 3506). It carries the XMIT in-stream behind `DD DATA,DLM=`; IEBGENER stages it and TSO RECEIVE (NJE38 v2.3.0) unpacks it. This is the same method upstream sysgen uses for its mvslovers products. **No FTPD and no mvsMF**, so none of the OSE-007 alternate access paths is used. No new dependency.
+
+New files: `scripts/deploy.sh` (`deploy|run|all`), `tests/guest/hello/hello_guest.py` (guest driver; it reuses the OSE-003 `mvs-smoke.py` and `tso-smoke.py` unchanged), `jcl/hello/deploy.jcl`, `list.jcl`, `run.jcl`, and `tests/host/test_hello_guest.py` (13 host tests). Changed: `Makefile` (`deploy`), the runbook and research T-8.
+
+| Acceptance | Command | RC | Result |
+|---|---|---|---|
+| 1 build | (host part, merged 2026-11-26) | 0 | `HELLO.xmit` `0e69e9fa…`; `deploy.sh` refuses any other hash |
+| 2 deploy + listing job | `DASD_VOLUME=ose-guest-004 sh scripts/deploy.sh deploy`, 5 times | 0 ×5 | OSEHDEP: DELOLD, STAGE, RECV, CLEANUP `0000`, GONE `0004` (in the last 3 runs; step added after the anomaly below). The separate listing job OSEHLST, `LISTDS 'MVSCE02.OSE.LOAD' MEMBERS`, lists `HELLO`. RECEIVE: "Receive into 'MVSCE02.OSE.LOAD' successful"; IEBCOPY `IEB167I` member loaded |
+| 3 batch | `sh scripts/deploy.sh run`, 4 times | 0 ×4 | OSEHRUN: step RC0 `0000`, step RC4 (`PARM='4'`) `0004`. SYSPRINT lines exactly `OSE-004 HELLO RC=0` and `OSE-004 HELLO RC=4`, parsed from the JES2 printer file |
+| 4 TSO | inside each `run` | 0 ×4 | logon MVSCE02, `CALL 'MVSCE02.OSE.LOAD(HELLO)' '7'` shows `OSE-004 HELLO RC=7` then `READY`, with no `ALLOC` needed; logoff |
+| 5 toolchain note | research T-8 | — | runtime: entry and RC propagation, PARM, stdout routing (batch and TSO), printf varargs, transport code page cp037, TK5 macros at runtime (only the paths hello uses); AMODE/RMODE not applicable. Each item labelled |
+| final clean run | `sh scripts/deploy.sh all` | 0 | `runs/20261127T123005Z-1887/` |
+| host | `python -I scripts/check_repo.py`; `python -m unittest discover -s tests/host` | 0, 0 | see the commit; 13 new tests |
+| regressions after moving `tools_image` into `common.sh` | `sh scripts/doctor.sh`; `sh scripts/smoke.sh ipl1` (×2) | 0, 0 | |
+
+Every IPL shut down cleanly under the OSE-003 rules (`$HASP099` → `$HASP085` → `IEE334I` after the request, Hercules RC 0). The MVSCE02 password is read from `users.conf` at run time; a grep of every saved file finds it nowhere.
+
+**Anomaly (open, guarded):** on the second deploy (guest time 07:12), the IDCAMS DELETE of the existing `MVSCE02.OSE.LOAD` reported `IKJ56228I … NOT IN CATALOG OR CATALOG CAN NOT BE ACCESSED`, and RECEIVE then wrote into the existing library. With identical bytes the test passed, but a stale module could have passed the same way. A diagnostic job found the library correctly cataloged (UCPUB000, via the MVSCE02 alias). The same DELETE worked in that job and in both later re-deploys. Cause unknown. **Fix:** a new step GONE must see the target gone (`LISTCAT` CC 4), or STAGE, RECV and CLEANUP are skipped and the deploy fails. Covered by host tests.
+
+**Incident (my error):** a regression `smoke.sh ipl1` exported into the fixed `artifacts/evidence/ose-003/smoke/` and overwrote 9 of the 47 checksummed OSE-003 evidence files (4 with the new IPL, 5 with copies inherited from the rework run in the volume). No copy of the originals survives. `SHA256SUMS` is left as it was, so it reports them FAILED, and the facts are in `artifacts/evidence/ose-003/INCIDENT-2026-11-27-overwrite.md`. The content had been independently verified (OSE-003 review r1: 47/47) and is reproduced in `run2/`, `rework-r1/` and the reviewer's evidence. **Fix in this branch:** `smoke.sh` and `deploy.sh` export each invocation to a new directory that must not exist yet, and `smoke.sh` empties the volume's smoke directory first. This touches the merged OSE-003 `smoke.sh`, outside this card's file list; the reviewer should check it.
+
+Scope note: outside the card's list are `scripts/lib/common.sh` (`tools_image` and `creds` moved there unchanged from `smoke.sh`, with the tag now computed on call), `scripts/smoke.sh` (the move and the evidence fix), `docs/runbooks/sysgen-and-ipl.md` (evidence path), `tests/host/test_hello_guest.py`, and the incident note in the OSE-003 card.
+
+Not run: the OSE-012 runtime probes on the guest; the TSO return code of `CALL` (TSO does not display it).
+
+Next action: independent review of the guest part, including the `smoke.sh` and `common.sh` changes and the incident; then the human decides on the merge.
+
 ## Independent review and gate result
 
 ### Independent review — 2026-11-26

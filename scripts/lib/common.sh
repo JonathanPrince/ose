@@ -46,3 +46,39 @@ hrun() {
         -v "$(hostpath "$ROOT"):/ose" -v "$DASD_VOLUME:/work" -w /work \
         "$HERC_IMAGE" bash -euo pipefail -c "$1"
 }
+
+# --- pinned tools image and guest credentials (OSE-003; shared by smoke.sh and
+# deploy.sh since OSE-004, moved here unchanged) ---------------------------
+PY=${PYTHON:-$(command -v python3 2>/dev/null || command -v python)}
+DEBPINS="$PY -I $ROOT/scripts/lib/debpins.py"
+# R03-5 / ADR-0006: the tools layer adds s3270 and netbase, pinned by
+# version and .deb SHA-256 in upstream/debian/packages.lock.json. The tag names
+# the pin set, and the installed versions are re-checked on every use, so an
+# older or hand-built image with the same name is never trusted.
+TOOLS_IMAGE=   # set by tools_image(), so sourcing this file needs no Python
+
+tools_image() {
+    TOOLS_IMAGE="${HERC_IMAGE}-tools-$($DEBPINS digest tools)" || die "debpins: lock invalid"
+    if ! docker image inspect "$TOOLS_IMAGE" >/dev/null 2>&1; then
+        log "building $TOOLS_IMAGE (s3270 and netbase pinned by upstream/debian/packages.lock.json)"
+        apt_run=$($DEBPINS install-line tools) || die "debpins: lock invalid"
+        MSYS_NO_PATHCONV=1 docker build -q -t "$TOOLS_IMAGE" - >/dev/null <<EOF || die "tools image build failed"
+FROM $HERC_IMAGE
+USER root
+RUN $apt_run
+USER ose
+EOF
+    fi
+    verify=$($DEBPINS verify-line tools) || die "debpins: lock invalid"
+    MSYS_NO_PATHCONV=1 docker run --rm "$TOOLS_IMAGE" sh -c "$verify" \
+        || die "$TOOLS_IMAGE does not carry the pinned tool packages"
+    MSYS_NO_PATHCONV=1 docker run --rm "$TOOLS_IMAGE" sh -c "$($DEBPINS verify-line hercules)" \
+        || die "$TOOLS_IMAGE does not carry the pinned Hercules-image packages"
+}
+
+# Non-admin user for the JES2 job and TSO: from upstream users.conf in the
+# volume (sysgen's published defaults), never stored in this repository.
+creds() {
+    MSYS_NO_PATHCONV=1 docker run --rm -v "$DASD_VOLUME:/work:ro" "$HERC_IMAGE" \
+        awk '$1 == "MVSCE02" {print $1, $2}' /work/sysgen/users.conf
+}
