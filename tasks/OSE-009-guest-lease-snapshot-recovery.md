@@ -1,5 +1,5 @@
 # OSE-009 — Guest lease, snapshot and recovery harness
-Status: IMPLEMENTED (R09-1..R09-6 fixed 2026-11-27 with regression tests and guest reruns; awaiting re-review; manual lease protocol remains mandatory)
+Status: VERIFIED (6f13967 independent re-review accepted 2026-11-27; R09-1..R09-6 closed; human integration pending)
 Milestone: M0a (generic platform)
 Dependencies: OSE-003
 Owner: coordinator session (standard tier)
@@ -131,3 +131,34 @@ Evidence for the rework: `artifacts/evidence/ose-009/rework-r1/` (`SHA256SUMS` 2
 Not run: Linux host; a full 50-minute `sysgen.sh run` with the lease (the shell path is covered by the fake-backend tests); leases across two hosts.
 
 Next action: re-review of R09-1..R09-6; after acceptance, the human decides on merge. The manual `Guest lease:` protocol stays until then.
+
+### Independent re-review — 2026-11-27
+
+Reviewer: Codex, high tier, independent of author. Reviewed `6f13967` against `613f777` on `review/OSE-009-r2`, separate worktree `artifacts/review/OSE-009-r2`. **Accepted; all six findings closed; no new findings. OSE-009 VERIFIED, human integration pending.** No implementation changes, merge or push.
+
+- **R09-1 closed:** source and negative-pin target have independent ledger entries, validated before target mutation; target-specific container name/label; cleanup retains original volume/token identities. The prior independent fake-backend reproduction now refuses OTHER-REVIEW-HOLDER's target before any volume removal/start, releases its own source lease and leaves the other lease untouched. The host suite also proves normal negative-pin takes/releases both leases with the target label.
+- **R09-2 closed:** users.conf is saved/staged before the swap; late failure rolls back both files, and failed rollback is explicitly RC8 with recoverable old data. Repeated the original blocked-staging fixture as uid1000 in the pinned image: RC7 with OLD_GUEST/OLD_USERS intact. Independently ran the four pinned-image cases: normal success RC0, blocked staging RC7 unchanged, late failure RC7 with exact original bytes, rollback failure RC8 with old data retained. Host tests also cover checksum mismatch and Python RC8 mapping.
+- **R09-3 closed:** failed Docker ps is an error, not idle. Original independent failed-query reproduction now returns RC5 for acquisition and require_stopped, without creating a lease. Release also refuses failed queries in the host regressions.
+- **R09-4 closed:** labelled ownership is used for cleanup; stops precede release; failed stop/query keeps the lease and returns failure; central release refuses running containers. Original independent failed-wait reproduction now stops its container before removing the lease. Stuck-container and cleanup-query regressions pass. Live independent guests were inspected: each cleanup label exactly matched the first16 SHA256 hex of its own lease token (tokens not saved/printed). Normal end-to-end cleanup left no actual running container or tool lease.
+- **R09-5 closed:** ownership is checked before Docker mutation. Original independent unleased --create reproduction now returns RC3 with zero Docker calls. Both wrong-token and absent-lease cases pass in the host suite.
+- **R09-6 closed:** load_guest configures module paths without rewriting process environment. Original independent one-test reproduction now leaves same-process native git init RC0 before and after; all previously failing ResumeAdmission fixtures pass in the complete suite.
+
+| Command/check | RC | Result / evidence (relative to this worktree) |
+|---|---|---|
+| `OSE_BASH=C:/Program Files/Git/bin/bash.exe python -I -m unittest discover -s tests/host -v` | 0 | 126 total: 117 passed, 9 skipped (pinned Sysgen/MVP source caches absent); `artifacts/evidence/review-ose-009-r2/host-tests.txt` and `.rc` |
+| `PYTHON=python SRC_VOLUME=ose-sysgen-review-003-20261127 VOL_A=ose-review-009-r2-a VOL_B=ose-review-009-r2-b PORT_A=14370 PORT_B=14371 sh tests/integration/harness/recovery.sh` | 0 | 15/15 RESULT checks pass. Concurrent guests/ports and JES/TSO; marker creation, planned SIGKILL and survival; restore, post-restore JES/TSO and marker absence; corrupt snapshot verify/restore RC6 with unchanged-volume hash. `artifacts/evidence/ose-009/runs/20261127T171821Z-785/summary.txt`; wrapper log/RC under reviewer evidence |
+| `python -I tests/integration/harness/restore_faults_in_image.py --out artifacts/evidence/review-ose-009-r2/restore-in-image` | 0 | four cases above in pinned image, expected 0/7/7/8; saved JSON/console/RC |
+| `python artifacts/evidence/review-ose-009-r2/original-restore-regression.py` | 0 | assertions of production-uid1000 staging-blocked RC7/unchanged pair pass; fixture/results retained |
+| `python artifacts/evidence/review-ose-009-r2/admission-regressions.py`; `environment-regression.py`; `shell-regressions.py` (same directory) | 0 each | prior independent fault reproductions now assert corrected behavior. Fake Docker/Git only for admission/shell tests; no real sysgen/fetch/volume mutation |
+| Live label comparison and lease-status capture | 0 | actual per-volume token/label agreement, three ALIVE leases during orchestration; `live-container-labels.json` / `live-tool-leases.txt` |
+| Python SHA256 evidence audit | 0 | author rework 2/2 (`c07e8c1a...`), author real recovery 31/31 (`963ccbd2...`), prior independent review 156/156 (`545af9ac...`) unchanged; full hashes in `evidence-audit.json` |
+| Final credential scan / container and tool-lease checks | 0 | no guest password in evidence, no running containers, `no leases`; saved reviewer files |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | repository/docs checks |
+
+Reviewer evidence/fixtures: `artifacts/evidence/review-ose-009-r2/`. Snapshot `artifacts/guest/snapshots/h009-base-20261127t171821z-785/` belongs to this review. Both automatic and manual review leases covered real guest work; released after containers stopped. Only a stopped independent reviewer baseline and fresh disposable `ose-review-009-r2-a` / `ose-review-009-r2-b` were used; author volumes never mounted. Reviewer guests retained stopped. Planned SIGKILL was the isolated acceptance fault, not an unclean shutdown accidentally accepted.
+
+Limits retained: Linux host paths/process liveness, cross-machine leases and a new full 50-minute sysgen were not exercised. Sysgen negative-pin lease behavior was checked through the real shell entry point with fake backends; existing full-build evidence remains separate. Script leases are cooperative within the Docker host/account; manual Docker commands can bypass them. No multi-user security boundary is claimed. The runbook now labels Linux host support unverified.
+
+Following this successful independent review, tasks/README.md and this branch's status now document the reviewed lease tool protocol. The shared author checkout's temporary manual review line was restored; the new instructions take effect through human integration. OSE-014 remains the next platform task; this review does not complete M0a or start package work.
+
+Re-review evidence manifest: `artifacts/evidence/review-ose-009-r2/REVIEW-SHA256SUMS`, 154 files; SHA-256 `60e0834cc75c691933bdc89802ea12cb9501f0af5363db2d473f0a825dcd8f5a`.

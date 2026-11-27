@@ -43,9 +43,17 @@ Cards name a **tier**, never a vendor or model. Mapping tiers to models is local
 
 Give an agent the task card, the spec sections and ADRs the card names, the relevant interface docs and nothing else. It fetches more when it needs it. Never base an ABI or security conclusion on a summary alone; cite the source file and line at a pinned commit.
 
-## Guest resources (until OSE-009 delivers leases)
+## Guest resources (OSE-009, independently verified)
 
-Only one guest-mutating task may run against a given emulator or DASD set at a time. The holder is recorded on the `Guest lease:` line of `docs/status.md` (task ID, owner, DASD set, start time). A task must not touch the guest unless it holds that line. Tasks 003, 004 (guest part), 006, 009 and 011 (guest part) are guest-mutating.
+Use `scripts/guest/guest.py` and the reviewed runbook `docs/runbooks/guest-lease-snapshot-restore.md`. Only one mutating task may use an emulator or DASD set at a time. Before guest work, inspect `make lease-status`; the tool's registry is authoritative. The manual `Guest lease:` status line is a pointer to that registry, not a second lock.
+
+- All supported guest entry points acquire/check the relevant leases. A coordinator that already owns a lease can pass `OSE_LEASE_TOKEN`; it remains responsible for its lifecycle. Acquire a separate lease for every target volume, including disposable copies, before changing it. Container names/labels identify the volume and lease owner.
+- Leases use the shared Docker host/account directory `OSE_LEASE_DIR` (default `~/.ose-guest/leases`), shared across worktrees. Do not use isolated per-worktree registries for real shared volumes; private registries belong only in mocked tests.
+- Release only after owned containers are confirmed stopped. Docker query/cleanup failures retain the lease and return nonzero. Inspect the reported holder/container state and recover explicitly; do not silently steal or bypass a lease. Stale leases require inspection and an explicit `lease break`; live or foreign leases cannot be broken by the tool.
+- Snapshot/restore require the token, a stopped guest and verified manifests. RC7 means restore failed with the original guest unchanged/restored; RC8 means rollback also failed and requires the documented manual recovery.
+- Acquisition is enforced by repository scripts. A hand-started Docker mutation bypasses acquisition, so all contributors must follow the same lease protocol. This is lab coordination, not a Docker daemon security boundary or a distributed multi-host lock.
+
+Tasks 003, 004 (guest), 006, 009, 011 (guest) and 014 (package guest checks) must follow this protocol. Existing snapshot, credential and no-production rules remain in force. Human integration of the reviewed OSE-009 changes activates this replacement for the former manual ledger.
 
 ## Usage log (`tasks/usage.jsonl`)
 

@@ -2,7 +2,7 @@
 
 Updated: 2026-11-27, platform-first specification amendment at the human request (implementation gates still open)
 Milestone: **M0a, reusable MVP development platform**: in progress; M0b OSE audits follow its acceptance
-Guest lease: none held (released by OSE-009 rework, 2026-11-27; `make lease-status`: no leases). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004, ose-guest-011, ose-h009-a, ose-h009-b (OSE-009 disposable), reviewer volumes. The manual protocol stays in force until OSE-009 is accepted.
+Guest lease: use `make lease-status` / scripts/guest/guest.py (OSE-009 VERIFIED; protocol activated through human integration). No review leases held; reviewer volumes ose-review-009-r2-a and ose-review-009-r2-b retained stopped.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -21,7 +21,7 @@ Merged to main after independent review (2026-11-26):
 | Gate criterion | Tasks | Evidence/state |
 |---|---|---|
 | Pinned host/guest builds; repeated IPL/JES/TSO; reproducible HELLO deploy and runtime | 002, 003, 004, 012, 013 | accepted baseline evidence retained; independent clean-checkout platform repeat still required by 014 |
-| Generic leases, isolated ports/volumes, snapshot/restore and corruption rejection | 009 | positive independent recovery repeat passed; safety/test-isolation findings R09-1..R09-6 open |
+| Generic leases, isolated ports/volumes, snapshot/restore and corruption rejection | 009 | met: 6f13967 VERIFIED; all six findings closed; independent 15-check recovery repeat passes |
 | Package configuration and shared harness; real MVP package install/runtime/recovery | 014 | BACKLOG, waits for 009; XMIT RECEIVE alone is insufficient |
 | Second independent example through unchanged shared harness | 014 | not run |
 | Standalone export, dependency rights/provenance, version and OSE consumption plan | 014 | not run; no publication authorization implied |
@@ -48,7 +48,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-006 | UFSD cross-space tests | BACKLOG (M0b; waits for M0a/014) | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG (M0b; waits for M0a/014; existing escalations retained) | high | — |
 | OSE-008 | Execution model and runtime audit | BACKLOG (M0b; waits for M0a/014) | high | — |
-| OSE-009 | Generic guest lease, snapshot, recovery | IMPLEMENTED (R09-1..R09-6 fixed 2026-11-27; recovery rerun RC 0; awaiting re-review) | standard | coordinator |
+| OSE-009 | Generic guest lease, snapshot, recovery | VERIFIED (6f13967; R09-1..R09-6 closed; human integration pending) | high re-review | coordinator |
 | OSE-010 | M0b OSE gate review | BACKLOG (after M0a and OSE audits) | high and human | — |
 | OSE-011 | TSO terminal and name audit | MERGED (VERIFIED; source part and guest listing: no name collision) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
@@ -82,7 +82,7 @@ Resolved 2026-11-26:
 - The toolchain macros (maclib370) come from TK5, not MVS/CE. Whether libc370 built against them runs correctly on MVS/CE needs a guest run (OSE-004 T-1).
 
 ## Next actions
-1. Claim OSE-009: build and independently verify generic guest isolation, leases and recovery against the accepted baseline.
+1. Integrate VERIFIED OSE-009 (6f13967 and independent review), including the reviewed lease protocol; then prepare OSE-014 for claim.
 2. Complete OSE-014: separate package configuration from shared tooling, implement actual MVP packaging/install tests and a second example, validate the standalone export, then obtain independent review and human M0a acceptance.
 3. After M0a, start OSE-006/007/008 using that platform, then OSE-010 for the remaining M0b/OSE gate and M1 queue. Existing security requirements remain mandatory. Repository publication remains a separate human decision.
 
@@ -141,3 +141,7 @@ The human requested the generic MVP development platform before further OSE-spec
 ## OSE-009 independent review — 2026-11-27
 
 Reviewed dc83bd5 on `review/OSE-009-r1`: changes requested R09-1..R09-6 (negative-pin target/source lease handling; restore rollback after users.conf failure; Docker busy-query failure admitted as stopped; exit cleanup releases a still-running guest; restore --create mutates before lease validation; whole-environment test patch breaks Git fixtures on Windows). Independent end-to-end recovery RC0/zero failures, including concurrent guests/ports, SIGKILL marker survival, restore/marker absence, JES/TSO and corruption refusal. Full host suite RC1: 89 passed, 11 errors, 9 skipped; author hashes31/31 match. Detailed reproduced fault evidence in OSE-009 card. Actual containers stopped and tool/manual review leases released; own reviewer volumes retained stopped. Keep manual lease protocol; no OSE-014 start, merge or push.
+
+## OSE-009 independent re-review — 2026-11-27
+
+6f13967 VERIFIED on `review/OSE-009-r2`: all six findings closed, no new findings. Full Windows host suite RC0 (117 passed/9 skipped), prior independent fault reproductions now pass, pinned-image restore cases return expected 0/7/7/8, and full real recovery repeat RC0 with all 15 checks passing. Live container labels matched own lease tokens. Author rework/recovery and prior reviewer manifests all match. No running containers or actual tool leases; manual review lease released; own reviewer guests retained stopped. Reviewed tool protocol replaces the manual ledger through human integration; tasks/README.md updated accordingly. OSE-014 next, M0a still open. No merge or push.
