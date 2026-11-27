@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: IMPLEMENTED (host part merged 2026-11-26; guest acceptance 2-5 passed 2026-11-27; R04-2 and R04-3 fixed 2026-11-27; awaiting re-review)
+Status: VERIFIED (host portion previously accepted and merged; guest re-review of c76f088 accepted 2026-11-27; human merge pending)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner: author model (standard tier)
@@ -150,3 +150,30 @@ Baseline: review/OSE-004-guest-r1 at 8e9486c (fast-forwarded). Lease on `ose-gue
 Reruns after the fixes, all on `ose-guest-004`: `deploy.sh stale` RC 0; `deploy.sh all` RC 0 (deploy: GONE `0004`, then STAGE, RECV and CLEANUP `0000`, listing shows HELLO; run: `0000`/`0004`, exact SYSPRINT lines, TSO `RC=7`); `smoke.sh ipl1` RC 0 (per-run guest directory). Host: `python -I scripts/check_repo.py` RC 0; `python -m unittest discover -s tests/host` RC 0.
 
 Next action: re-review of R04-2 and R04-3; then the human decides on the merge.
+
+### Independent guest re-review — 2026-11-27
+
+Reviewer: Codex, high tier (escalated after the first guest review). Reviewed `c76f088` against `8e9486c` on `review/OSE-004-guest-r2`, separate worktree `artifacts/review/OSE-004-guest-r2`. **Accepted; R04G-1 and R04G-2 closed; no new findings.** The author's R04-2/R04-3 names refer to those same findings. OSE-004 is VERIFIED, with its host portion accepted earlier. No merge or push.
+
+- **R04G-1 closed:** RECV and CLEANUP now repeat DELOLD/GONE prerequisites. Independently ran `PYTHON=python DASD_VOLUME=ose-review-004-r2-20261127 sh scripts/deploy.sh stale`: RC 0. The actual MVS 3.8j job OSEHSTL had DELOLD=0000 and GONE=0000; STAGE, RECV and CLEANUP each had both IEF202I and IEF272I skip messages and no executed-step RC. RECEIVE count stayed 1 before/after the negative job. The driver omits only the target DELETE and changes the job name, retaining the real template/conditions. The original intermittent DELETE cause remains unknown; its consequence is now guarded and tested.
+- **R04G-2 closed:** unique guest evidence directories retain failed exports; successful copies are compared by nonempty SHA-256 manifests with LF output before deletion. Host tests exercised failed/incomplete copies and successful two-file export. Additional independent mock cases for failed log capture, failed guest hashing and wrong copied bytes each returned RC 1 with no guest-copy deletion. An independent smoke-wrapper mock returned RC 1 for copy RC 23. No real guest/Docker operation occurs in these mocks. All fixtures and outputs are retained.
+
+Validation (commands run in this review worktree; `OSE_BASH=C:/Program Files/Git/bin/bash.exe`, host `PYTHON=python`):
+
+| Command/check | RC | Evidence/result |
+|---|---|---|
+| `python -I -m unittest discover -s tests/host -v` | 0 | 68 total: 59 passed, 9 skipped because pinned Sysgen/MVP source caches absent; `artifacts/evidence/review-ose-004-r2/host-tests.txt` |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | structural/docs checks |
+| `DASD_VOLUME=ose-review-004-r2-20261127 sh scripts/deploy.sh stale` | 0 | negative behavior above, clean shutdown, export verified (4 files); `guest/runs/20261127T140242Z-357/deploy-stale/` under `artifacts/evidence/ose-004/` |
+| Same environment, `sh scripts/deploy.sh all` | 0 | deploy: GONE=0004 and all other steps=0000; independent LISTDS lists HELLO. Batch RC0=0000 / RC4=0004, exact output. TSO plain CALL7 output and logoff pass. Export verified (4 deploy, 10 run files); `guest/runs/20261127T140408Z-880/` |
+| Same environment, `sh scripts/smoke.sh ipl1` | 0 | IPL 8s, ordered clean shutdown, Hercules RC0, no forced quit; `artifacts/evidence/ose-003/smoke-runs/20261127T140740Z-1586/` |
+| `python artifacts/evidence/review-ose-004-r2/export-extra.py`; `bash artifacts/evidence/review-ose-004-r2/smoke-export-failure.sh` | 0, 0 | assertions of expected failure behavior passed; mocked wrapper return codes recorded separately |
+| `python artifacts/evidence/review-ose-004-r2/audit.py` | 0 | independently asserts the three guest result files and exact negative skip messages |
+| Python hash verification | 0 | author rework manifest 26/26 match, SHA256 89858afb8ea23756663b0b3c5dd416e1dba2746c0e0bbb5bf1383d88b523fd94; previous reviewer manifest 32/32 unchanged, SHA256 1ce2cc9214136e98115346692d5c0f7ec859ad51eae532c4c5c3559bc25aa504 |
+| Read-only credential/cleanup audit in pinned tools image | 0 | no guest password in review/HELLO evidence; zero deployment result copies left in the volume after verified exports |
+
+Wrapper logs/RCs, fixtures and audits are under `artifacts/evidence/review-ose-004-r2/`. A manual lease covered clone and all guest work on disposable `ose-review-004-r2-20261127`, copied from the stopped independent reviewer baseline `ose-sysgen-review-003-20261127`. Author volumes never mounted. Four cold IPLs (11s, 10s, 8s, 8s), all followed by ordered shutdown messages after the shutdown request, Hercules RC0 and no forced quit. No active containers; lease released; reviewer volume retained stopped. Only review/status/usage documents changed.
+
+Scope: host toolchain build was not repeated; accepted host build and full artifact hashes remain the prior evidence, and its independently built XMIT was verified before reuse. No new full sysgen, UFSD/security/runtime probe suite or package release was attempted. T-8's limited HELLO runtime observations remain appropriate. The OSE-003 evidence overwrite incident is not reversed by this fix; prior independent evidence remains intact. Next action: human integration of the verified guest work.
+
+Re-review evidence manifest: `artifacts/evidence/review-ose-004-r2/REVIEW-SHA256SUMS`, 45 files; SHA-256 `578f97d181ed82cbf87fb8390fba75d0aca211ebfb6ecd182a3cf6c27381192c`.
