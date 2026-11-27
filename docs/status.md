@@ -1,8 +1,8 @@
 # Project status
 
-Updated: 2026-11-27, platform-first specification amendment at the human request (implementation gates still open)
+Updated: 2026-11-27 by the coordinator (OSE-009 merged to main on the human maintainer's instruction; tool lease protocol active)
 Milestone: **M0a, reusable MVP development platform**: in progress; M0b OSE audits follow its acceptance
-Guest lease: use `make lease-status` / scripts/guest/guest.py (OSE-009 VERIFIED; protocol activated through human integration). No review leases held; reviewer volumes ose-review-009-r2-a and ose-review-009-r2-b retained stopped.
+Guest lease: use `make lease-status` / scripts/guest/guest.py; the tool registry is authoritative (OSE-009 merged 2026-11-27; tasks/README.md Guest resources). This line is a pointer, not a lock.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -48,7 +48,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-006 | UFSD cross-space tests | BACKLOG (M0b; waits for M0a/014) | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG (M0b; waits for M0a/014; existing escalations retained) | high | — |
 | OSE-008 | Execution model and runtime audit | BACKLOG (M0b; waits for M0a/014) | high | — |
-| OSE-009 | Generic guest lease, snapshot, recovery | VERIFIED (6f13967; R09-1..R09-6 closed; human integration pending) | high re-review | coordinator |
+| OSE-009 | Generic guest lease, snapshot, recovery | MERGED (VERIFIED at 6f13967; lease protocol active) | high re-review | coordinator |
 | OSE-010 | M0b OSE gate review | BACKLOG (after M0a and OSE audits) | high and human | — |
 | OSE-011 | TSO terminal and name audit | MERGED (VERIFIED; source part and guest listing: no name collision) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |

@@ -1,5 +1,5 @@
 # OSE-009 — Guest lease, snapshot and recovery harness
-Status: VERIFIED (6f13967 independent re-review accepted 2026-11-27; R09-1..R09-6 closed; human integration pending)
+Status: MERGED (VERIFIED at 6f13967, independent re-review 2026-11-27; merged to main 2026-11-27 on the human maintainer's instruction; the tool lease protocol is now in force)
 Milestone: M0a (generic platform)
 Dependencies: OSE-003
 Owner: coordinator session (standard tier)
