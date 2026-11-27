@@ -2,7 +2,7 @@
 
 Updated: 2026-11-27, platform-first specification amendment at the human request (implementation gates still open)
 Milestone: **M0a, reusable MVP development platform**: in progress; M0b OSE audits follow its acceptance
-Guest lease: none held (released by OSE-011 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004, ose-guest-011, reviewer volumes. The next guest task must take the lease first.
+Guest lease: none held (released by OSE-009, 2026-11-27; `make lease-status`: no leases). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004, ose-guest-011, ose-h009-a, ose-h009-b (OSE-009 disposable), reviewer volumes. Until OSE-009 is reviewed, record leases here as well as with the tool.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -48,7 +48,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-006 | UFSD cross-space tests | BACKLOG (M0b; waits for M0a/014) | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG (M0b; waits for M0a/014; existing escalations retained) | high | — |
 | OSE-008 | Execution model and runtime audit | BACKLOG (M0b; waits for M0a/014) | high | — |
-| OSE-009 | Generic guest lease, snapshot, recovery | READY (M0a; next implementation task) | standard | — |
+| OSE-009 | Generic guest lease, snapshot, recovery | IMPLEMENTED (2026-11-27: acceptance 1-5 passed, end-to-end recovery RC 0; awaiting review) | standard | coordinator |
 | OSE-010 | M0b OSE gate review | BACKLOG (after M0a and OSE audits) | high and human | — |
 | OSE-011 | TSO terminal and name audit | MERGED (VERIFIED; source part and guest listing: no name collision) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |

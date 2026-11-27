@@ -83,6 +83,43 @@ creds() {
         awk '$1 == "MVSCE02" {print $1, $2}' /work/sysgen/users.conf
 }
 
+# --- OSE-009 guest leases and isolation ---------------------------------------
+# Every guest-mutating script holds the lease on $DASD_VOLUME for its whole run
+# (scripts/guest/guest.py; leases are host-wide in OSE_LEASE_DIR). If the caller
+# already holds it, it passes OSE_LEASE_TOKEN and the script only checks it.
+GUEST_PY="$ROOT/scripts/guest/guest.py"
+holder_pid() { # the Windows PID under Git Bash (MSYS PIDs are not Windows PIDs)
+    if [ -r "/proc/$$/winpid" ]; then cat "/proc/$$/winpid"; else echo "$$"; fi
+}
+guest_lease_begin() {
+    if [ -n "${OSE_LEASE_TOKEN:-}" ]; then
+        "$PY" -I "$GUEST_PY" lease check --volume "$DASD_VOLUME" --token "$OSE_LEASE_TOKEN" >/dev/null \
+            || die "OSE_LEASE_TOKEN does not hold the lease on $DASD_VOLUME (see above)"
+        return 0
+    fi
+    OSE_LEASE_TOKEN=$("$PY" -I "$GUEST_PY" lease acquire --volume "$DASD_VOLUME" \
+        --task "${OSE_TASK:-${0##*/}}" --holder-pid "$(holder_pid)") || die "cannot lease $DASD_VOLUME (see above)"
+    export OSE_LEASE_TOKEN
+    GUEST_LEASE_OWNED=1
+    trap guest_lease_end EXIT
+}
+guest_lease_end() {
+    if [ "${GUEST_LEASE_OWNED:-}" = 1 ]; then
+        "$PY" -I "$GUEST_PY" lease release --volume "$DASD_VOLUME" --token "$OSE_LEASE_TOKEN" >/dev/null \
+            || echo "${0##*/}: could not release the lease on $DASD_VOLUME" >&2
+        GUEST_LEASE_OWNED=
+    fi
+}
+# container name for this volume, so guests on different volumes never collide
+guest_container() { echo "$1-$DASD_VOLUME"; }
+# optional TN3270 for a person: GUEST_TN3270_PORT=13270 publishes 3270 on 127.0.0.1 only
+guest_ports() {
+    if [ -n "${GUEST_TN3270_PORT:-}" ]; then
+        case "$GUEST_TN3270_PORT" in *[!0-9]*) die "GUEST_TN3270_PORT must be a number";; esac
+        echo "-p 127.0.0.1:$GUEST_TN3270_PORT:3270"
+    fi
+}
+
 # --- guest job runner with verified evidence export (OSE-004 R04-3; shared
 # by deploy.sh and audit-listing.sh since OSE-011) ---------------------------
 # sha256 and relative path of every file under a directory, sorted (host and container)
@@ -101,13 +138,14 @@ sys.stdout.buffer.write(("\n".join(sorted(out)) + "\n").encode())'   # LF on eve
 # (a new host directory) and GUEST_EV (a new guest directory). From OSE-004
 # deploy.sh, generalised unchanged in behaviour for OSE-011.
 guest_run() {
-    NAME=$1; script=$2; mode=$3; shift 3
+    NAME=$(guest_container "$1"); script=$2; mode=$3; shift 3
     tools_image
     creds_line=$(creds) || die "cannot read guest credentials from $DASD_VOLUME"
     u=${creds_line%% *}; p=${creds_line#* }
     [ -n "$u" ] && [ -n "$p" ] && [ "$u" != "$p" ] || die "no MVSCE02 entry in users.conf"
     docker rm -f "$NAME" >/dev/null 2>&1 || true
-    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 \
+    # shellcheck disable=SC2046
+    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 $(guest_ports) \
         -e GUEST_USER="$u" -e GUEST_PASS="$p" \
         -v "$(hostpath "$ROOT"):/ose:ro" -v "$DASD_VOLUME:/work" -w /work/sysgen/MVSCE "$TOOLS_IMAGE" \
         sh -c '[ ! -e "$0" ] && mkdir -p "$0" && s=$1 && shift && exec python3 -I "$s" --evidence "$0" "$@"' \

@@ -2,6 +2,7 @@
 deck building for the EBCDIC reader, DLM choice, template filling, LISTDS parsing and
 the fail-closed shape of the deploy JCL. No guest, no Docker."""
 import importlib.util
+import json
 import re
 import unittest
 from pathlib import Path
@@ -202,7 +203,10 @@ class DeployExport(unittest.TestCase):
         log = tmp / "docker.log"
         posix = lambda p: str(p).replace("\\", "/")  # noqa: E731
         env = dict(os.environ, FAKE_MODE=mode, FAKE_LOG=posix(log), PYTHON=posix(Path(sys.executable)),
-                   OSE004_EVIDENCE_ROOT=posix(tmp / "ev"), DASD_VOLUME="fake-volume")
+                   OSE004_EVIDENCE_ROOT=posix(tmp / "ev"), DASD_VOLUME="fake-volume",
+                   # OSE-009: deploy.sh takes a lease; keep it in the test's own directory
+                   OSE_LEASE_DIR=str(tmp / "leases"), OSE_GUEST_LOG_DIR=str(tmp / "guest-logs"),
+                   OSE_DOCKER=json.dumps([BASH, posix(d)]))
         cmd = (f'PATH="$(cygpath -u "{posix(d.parent)}" 2>/dev/null || echo "{posix(d.parent)}"):$PATH" '
                f'sh "{posix(ROOT)}/scripts/deploy.sh" run')
         p = subprocess.run([BASH, "-c", cmd], env=env, capture_output=True, text=True)

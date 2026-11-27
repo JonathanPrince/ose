@@ -3,7 +3,7 @@
 # The rest name their owning task.
 PYTHON ?= python3
 
-.PHONY: check test-host doctor fetch build sysgen smoke deploy test-guest test-security package restore
+.PHONY: check test-host doctor fetch build sysgen smoke deploy test-guest test-security package restore lease-status
 
 check:
 	$(PYTHON) scripts/check_repo.py
@@ -37,4 +37,9 @@ deploy:
 test-guest:    ; $(call notyet,OSE-014 generic platform; OSE-006 after M0a)
 test-security: ; $(call notyet,OSE-007 (plan only in M0b))
 package:       ; $(call notyet,OSE-014 generic MVP packaging in M0a; OSE distribution in M5)
-restore:       ; $(call notyet,OSE-009)
+# OSE-009 guest harness (scripts/guest/guest.py; runbook guest-lease-snapshot-restore)
+#   make restore DASD_VOLUME=v SNAPSHOT=name OSE_LEASE_TOKEN=token   (verifies, then restores)
+restore:
+	$(PYTHON) -I scripts/guest/guest.py restore --volume "$(DASD_VOLUME)" --name "$(SNAPSHOT)" --token "$(OSE_LEASE_TOKEN)"
+lease-status:
+	$(PYTHON) -I scripts/guest/guest.py lease status

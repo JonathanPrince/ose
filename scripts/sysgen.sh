@@ -13,7 +13,7 @@
 set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 . "$ROOT/scripts/lib/common.sh"
-NAME=ose-sysgen-run
+NAME=$(guest_container ose-sysgen-run)   # per volume (OSE-009)
 OUTDIR="$ROOT/artifacts/sysgen"
 
 prepare() {
@@ -57,6 +57,7 @@ export_out() {
 
 case "${1:-run}" in
     run)
+        guest_lease_begin            # OSE-009: exclusive use of $DASD_VOLUME
         mkdir -p "$EVID"; prepare
         t0=$(date +%s); start ATTEMPTS="${ATTEMPTS:-3}" TIMEOUT="${TIMEOUT:-3600}"
         rc=$(wait_rc run); t1=$(date +%s)
@@ -68,6 +69,7 @@ case "${1:-run}" in
         MSYS_NO_PATHCONV=1 docker run --rm -v "$DASD_VOLUME:/work:ro" "$HERC_IMAGE" sh -c 'tail -5 /work/evidence/wrapper.log; tail -3 /work/sysgen/sysgen.log 2>/dev/null' ;;
     export) export_out ;;
     negative-pin)
+        guest_lease_begin            # OSE-009: the source volume
         # On a copy of the leased volume: a --step restart restores step-8 DASD,
         # which must not touch the finished system.
         mkdir -p "$EVID"; prepare
