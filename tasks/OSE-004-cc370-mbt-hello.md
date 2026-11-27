@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: VERIFIED (host portion previously accepted and merged; guest re-review of c76f088 accepted 2026-11-27; human merge pending)
+Status: MERGED (VERIFIED: host part 2026-11-26, guest part at c76f088 2026-11-27; merged to main 2026-11-27 on the human maintainer's instruction)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner: author model (standard tier)

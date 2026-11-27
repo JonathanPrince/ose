@@ -1,6 +1,6 @@
 # Project status
 
-Updated: 2026-11-27 by the coordinator (OSE-003 merged to main on the human maintainer's instruction; ADR-0006 accepted)
+Updated: 2026-11-27 by the coordinator (OSE-004 guest part merged to main on the human maintainer's instruction; reusable-MVP spec direction cherry-picked)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
 Guest lease: none held (released by the OSE-004 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004 (OSE-004 deploy target), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
 
@@ -22,7 +22,7 @@ Merged to main after independent review (2026-11-26):
 |---|---|---|---|
 | Clean pinned Sysgen build boots twice | 002, 013, 003 | OSE-003 independent repeat: build RC 0, 3181 s, two IPLs 7/9 s, pin receipts | observed; harness changes requested R03-1..R03-5 |
 | Native TSO/JES smoke tests | 003 | independent raw spool BR14=0000, PLANT=0004; MVSCE02 TIME/logoff pass | observed; failure-path harness findings open |
-| Compile/deploy hello | 004 | `make build` RC 0; HELLO load module and XMIT reproducible (research 2026-11-26-toolchain T-7; runbook hello-compile-deploy) | host part accepted and merged; deploy and guest runs not started |
+| Compile/deploy hello | 004 | `make build` reproducible (T-7); `make deploy` + listing job; batch RC 0000/0004 with exact output; TSO CALL (research T-8; runbook hello-compile-deploy) | met (OSE-004 MERGED) |
 | UFSD read/write across two guest clients | 005, 006 | research 2026-11-26-ufsd-audit (source only) | source audit VERIFIED; guest tests not started |
 | Dependency/license inventory | 002, 004 | dependencies.lock.json (39 components, 2 excluded, pending_enforcement empty); real pin receipts from author and independent OSE-003 builds | guest component pin proof observed; s3270 pin and build-host ADR reconciliation requested |
 | Actual interfaces documented | 005, 007, 008, 011, 012 | docs/interfaces/ufsd-observed.md; research -ufsd-audit, -libc370-inventory, -tso-terminal-audit | partial (005, 011 source part, 012 done; 007, 008 not started) |
@@ -36,7 +36,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
 | OSE-003 | Build host doctor and sysgen | MERGED (VERIFIED at 85414c2; ADR-0006 accepted) | standard | coordinator |
-| OSE-004 | CC/370 + MBT hello | VERIFIED (c76f088 guest re-review accepted; host already MERGED; human merge pending) | standard | coordinator |
+| OSE-004 | CC/370 + MBT hello | MERGED (VERIFIED; host and guest parts) | standard | coordinator |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG (OSE-005 escalations G-1, G-2, G-11, G-12 waiting) | high | — |
