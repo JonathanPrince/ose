@@ -43,7 +43,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | REVIEW (665604f closes R11G-1; R11G-2 test cleanup breaks Git fixtures on Windows) | economy → standard | coordinator |
+| OSE-011 | TSO terminal and name audit | IMPLEMENTED (guest listing: no collision; R11-G1 accepted; R11-G2 test isolation fixed 2026-11-27; awaiting re-review) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 

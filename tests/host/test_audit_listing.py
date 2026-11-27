@@ -4,6 +4,7 @@ library qualification, credentials, the IEFJSSNT decode and the collision table.
 No guest, no Docker."""
 import importlib.util
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -182,6 +183,37 @@ class EvidenceGate(unittest.TestCase):
         self.assertTrue(any("catalog" in x for x in self.problems(catalog=False)))
 
 
+class only_keys:
+    """Set environment keys for a block and restore exactly those keys afterwards
+    (review R11-G2): the previous value, or removal if the key was absent. The
+    rest of the environment is never cleared or rewritten. mock.patch.dict is
+    not used because it restores by clearing the whole mapping and refilling it,
+    which drops keys set meanwhile by anything else in the process."""
+
+    def __init__(self, **values):
+        self.values = values
+        self.saved = {}
+
+    def __enter__(self):
+        import os
+        for k, v in self.values.items():
+            self.saved[k] = os.environ.get(k)
+            os.environ[k] = v
+        return self
+
+    def __exit__(self, *exc):
+        import os
+        for k, old in self.saved.items():
+            if old is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = old
+        return False
+
+
+HOOK = {}   # MainReplay: called from the fake Hercules while main() runs
+
+
 class MainReplay(unittest.TestCase):
     """Replays a spool through main() with a fake Hercules: the driver's exit
     code must reflect the evidence gate, not only the step RCs."""
@@ -223,25 +255,50 @@ class MainReplay(unittest.TestCase):
             def stop(self):
                 self.stop_mark = len(self.console)
                 self.console += shutdown
+                if HOOK.get("during_run"):
+                    HOOK["during_run"]()
                 return 0
         smoke.Herc = FakeHerc
         mod = real("run_listing", ROOT / "tests" / "guest" / "audit" / "run_listing.py")
         mod.JCL = ROOT / "jcl" / "audit" / "list-libraries.jcl"
         mod.load = lambda name, path: {"mvs_smoke": smoke, "hello_guest": hg}[name]
-        argv, env = sys.argv, dict(os.environ)
-        sys.argv = ["run_listing.py", "--mvsce", str(tmp), "--evidence", str(tmp / "ev")]
-        os.environ.update(GUEST_USER=USER, GUEST_PASS="SECRET1")
-        try:
-            mod.main()
-        except SystemExit as e:
-            return e.code
-        finally:
-            sys.argv = argv
-            os.environ.clear()
-            os.environ.update(env)
+        argv = ["run_listing.py", "--mvsce", str(tmp), "--evidence", str(tmp / "ev")]
+        with mock.patch.object(sys, "argv", argv), only_keys(GUEST_USER=USER, GUEST_PASS="SECRET1"):
+            try:
+                mod.main()
+            except SystemExit as e:
+                return e.code
+        return None
 
     def test_complete_replay_passes(self):
         self.assertEqual(self.replay(full_spool()), 0)
+
+    def test_replay_restores_only_its_own_environment_keys(self):
+        """R11-G2: the replay restores GUEST_USER/GUEST_PASS only. A key that
+        something else sets while main() runs survives, the environment is never
+        cleared, and a key that existed before gets its old value back."""
+        import os
+        import sys
+        during, outer = "OSE_TEST_SET_DURING_RUN", "OSE_TEST_OUTER"
+        before_argv = list(sys.argv)
+        clears = []
+        original_clear = os.environ.clear
+        with only_keys(**{outer: "kept", "GUEST_USER": "outer-user"}):
+            HOOK["during_run"] = lambda: os.environ.__setitem__(during, "set-by-other-code")
+            os.environ.clear = lambda: clears.append(1) or original_clear()
+            try:
+                self.replay(full_spool())
+            finally:
+                HOOK.clear()
+                del os.environ.clear                                 # back to the class method
+            self.assertEqual(clears, [], "the replay cleared the process environment")
+            self.assertEqual(os.environ.get(during), "set-by-other-code")
+            self.assertEqual(os.environ[outer], "kept")
+            self.assertEqual(os.environ["GUEST_USER"], "outer-user")
+            self.assertNotIn("GUEST_PASS", os.environ)
+        os.environ.pop(during, None)
+        self.assertNotIn(outer, os.environ)
+        self.assertEqual(sys.argv, before_argv)
 
     def test_unparsed_line_fails_the_run(self):
         self.assertEqual(self.replay(full_spool(extra_member="  garbage here")), 1)

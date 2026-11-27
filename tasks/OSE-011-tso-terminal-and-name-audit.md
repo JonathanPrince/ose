@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: REVIEW (665604f closes R11G-1; new P2 R11G-2 test environment corruption blocks full host suite)
+Status: IMPLEMENTED (source part accepted; guest listing done 2026-11-27; R11-G1 accepted; R11-G2 fixed 2026-11-27; awaiting re-review)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -154,3 +154,14 @@ Reviewer: Codex, high tier (escalated after failed guest review), independent of
 The environment reproduction explicitly adds the repository to sys.path; an initial scratch invocation omitted that import path and did not run the tests, so it was corrected before drawing the conclusion above. Existing independent guest evidence was copied byte-for-byte with SHA-256 assertions before replay. The new code is data-analysis/test-only; JCL, shared runner, pinning and deployment are unchanged, so no new guest mutation was needed. Terminal runtime probes and macro-manual work remain outside this focused review. Next action: fix R11G-2 and rerun the complete host suite; then focused re-review. Do not mark VERIFIED yet.
 
 Re-review evidence manifest: `artifacts/evidence/review-ose-011-r2/REVIEW-SHA256SUMS`, 25 files; SHA-256 `7ffffd426d18aa62c6cd79d5492931325a002cafb3b279a8fd3da80d7d4d721a`.
+
+### Rework after review r2 (R11-G2), 2026-11-27, author
+Baseline: review/OSE-011-guest-r2 at 41b06c4 (fast-forwarded). Test-only change, so no guest run was needed.
+
+**Finding (P2):** `MainReplay.replay()` restored the environment by `os.environ.clear()` plus a refill from a snapshot. That rewrites the whole process environment and drops keys set meanwhile by other code. **Fix:** a small `only_keys` context manager sets `GUEST_USER` and `GUEST_PASS` and restores exactly those two keys: the old value, or removal if absent. `mock.patch.dict` was tried first and rejected, because it also restores by clearing the mapping and refilling it.
+
+**Regression test** `test_replay_restores_only_its_own_environment_keys`: the fake Hercules sets an unrelated key during `main()`, and `os.environ.clear` is instrumented. With the fix, no clear happens, the unrelated key survives, a pre-existing `GUEST_USER` gets its old value back and `GUEST_PASS` is removed. The same test **fails** against the reviewed `replay()` (665604f) and against a `mock.patch.dict` variant (`clear()` called in both).
+
+Checks: `python -m unittest tests.host.test_audit_listing` RC 0 (22 tests); `python -m unittest discover -s tests/host` RC 0; `python -I scripts/check_repo.py` RC 0.
+
+Next action: re-review of R11-G2; then the human decides on the merge.
