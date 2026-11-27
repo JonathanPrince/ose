@@ -86,7 +86,7 @@
       "pinned_by": "ADR-0005 (proposed)",
       "verified_date": "2026-11-26",
       "verified_by": "OSE-002 (coordinator session, high tier)",
-      "notes": "Must be configured to build the pinned Hercules tag, not its default branch; OSE-003 verifies."
+      "notes": "Not executed. ADR-0006 (proposed, 2026-11-27) builds Hercules directly at the pinned commit with its in-tree external libraries, because the helper clones those packages from their default branches. Kept as provenance for the Debian build-package list in scripts/host/hercules-image.sh."
     },
     {
       "name": "rakf",

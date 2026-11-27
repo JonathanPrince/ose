@@ -14,8 +14,9 @@ ATTEMPTS=${ATTEMPTS:-3}
 TIMEOUT=${TIMEOUT:-3600}
 LOCK=/ose/dependencies.lock.json
 PINS="python3 -I /ose/scripts/lib/pins.py --lock $LOCK"
-S=/work/sysgen
-E=/work/evidence
+P01=${P01:-/ose/upstream/sysgen/patches/0001-pin-mvp-and-rakf-commits.patch}
+S=${SYSGEN_DIR:-/work/sysgen}
+E=${EVIDENCE_DIR:-/work/evidence}
 mkdir -p "$E"
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" | tee -a "$E/wrapper.log"; }
 (cd / && git config --global --add safe.directory '*')
@@ -25,8 +26,8 @@ if [ ! -d "$S/.git" ]; then
     git -c core.autocrlf=false clone -q --no-checkout /ose/artifacts/cache/src/sysgen "$S"
     git -C "$S" config core.autocrlf false
     git -C "$S" checkout -q "$SYSGEN_COMMIT"
-    git -C "$S" apply --check /ose/upstream/sysgen/patches/0001-pin-mvp-and-rakf-commits.patch
-    git -C "$S" apply /ose/upstream/sysgen/patches/0001-pin-mvp-and-rakf-commits.patch
+    git -C "$S" apply --check "$P01"
+    git -C "$S" apply "$P01"
     git -C "$S" diff --stat | tee -a "$E/wrapper.log"
 
     log "step 2: pre-stage RAKF and MVP at their pins"
@@ -38,8 +39,43 @@ if [ ! -d "$S/.git" ]; then
     git -C "$S/MVSCE/MVP" config core.autocrlf false
     git -C "$S/MVSCE/MVP" checkout -q --detach "$MVP_COMMIT"
 else
-    log "steps 1-2: existing tree in the volume, continuing (HEAD $(git -C "$S" rev-parse HEAD))"
+    log "steps 1-2: existing tree in the volume, resuming it only if step 1b admits it"
 fi
+
+# step 1b (R03-1), on every invocation, fresh or resumed: the tree that is about
+# to run must be exactly SYSGEN_COMMIT plus the reviewed patch P-01. HEAD must
+# equal the pin, and the tracked working files (staged into a scratch index,
+# objects in a scratch store) must hash to the same tree as the pin with P-01
+# applied. Untracked build products (temp/, MVSCE/, logs) are not part of the
+# comparison; the RAKF and MVP clones among them are checked by step 3.
+verify_sysgen_tree() {
+    local head cur exp scratch
+    head=$(git -C "$S" rev-parse HEAD 2>/dev/null || echo none)
+    [ "$head" = "$SYSGEN_COMMIT" ] || { log "step 1b FAILED: sysgen HEAD $head is not the pin $SYSGEN_COMMIT"; return 1; }
+    scratch=$(mktemp -d)
+    mkdir -p "$scratch/obj"
+    (
+        export GIT_OPTIONAL_LOCKS=0 GIT_OBJECT_DIRECTORY="$scratch/obj" \
+               GIT_ALTERNATE_OBJECT_DIRECTORIES="$S/.git/objects"
+        cd "$S"
+        GIT_INDEX_FILE="$scratch/cur" git read-tree HEAD
+        GIT_INDEX_FILE="$scratch/cur" git add -u
+        GIT_INDEX_FILE="$scratch/cur" git write-tree > "$scratch/cur.tree"
+        GIT_INDEX_FILE="$scratch/exp" git read-tree "$SYSGEN_COMMIT"
+        GIT_INDEX_FILE="$scratch/exp" git apply --cached "$P01"
+        GIT_INDEX_FILE="$scratch/exp" git write-tree > "$scratch/exp.tree"
+    ) || { log "step 1b FAILED: could not compute the tree comparison"; rm -rf "$scratch"; return 1; }
+    cur=$(cat "$scratch/cur.tree"); exp=$(cat "$scratch/exp.tree")
+    if [ "$cur" != "$exp" ]; then
+        log "step 1b FAILED: tracked files are not $SYSGEN_COMMIT + P-01 (tree $cur, expected $exp); differing paths:"
+        GIT_OBJECT_DIRECTORY="$scratch/obj" GIT_ALTERNATE_OBJECT_DIRECTORIES="$S/.git/objects" \
+            git -C "$S" diff --stat "$exp" "$cur" | tee -a "$E/wrapper.log"
+        rm -rf "$scratch"; return 1
+    fi
+    rm -rf "$scratch"
+    log "step 1b ok: HEAD $head, tracked tree $cur = pin + P-01"
+}
+verify_sysgen_tree || exit 10
 
 log "step 3: validate before sysgen starts"
 { $PINS check-clone rakf "$S/temp/RAKF" && $PINS check-clone mvp "$S/MVSCE/MVP" \

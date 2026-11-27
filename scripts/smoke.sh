@@ -7,19 +7,32 @@
 set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 . "$ROOT/scripts/lib/common.sh"
-TOOLS_IMAGE="${HERC_IMAGE}-tools"
 NAME=ose-smoke
 SMOKE_EV=/work/evidence/smoke
+PY=${PYTHON:-$(command -v python3 2>/dev/null || command -v python)}
+DEBPINS="$PY -I $ROOT/scripts/lib/debpins.py"
+# R03-5 / ADR-0006 (proposed): the tools layer adds s3270 and netbase, pinned by
+# version and .deb SHA-256 in upstream/debian/packages.lock.json. The tag names
+# the pin set, and the installed versions are re-checked on every use, so an
+# older or hand-built image with the same name is never trusted.
+TOOLS_IMAGE="${HERC_IMAGE}-tools-$($DEBPINS digest tools)" || die "debpins: lock invalid"
 
 tools_image() {
-    docker image inspect "$TOOLS_IMAGE" >/dev/null 2>&1 && return
-    log "building $TOOLS_IMAGE (adds s3270 and netbase from Debian main; upstream Docker/Dockerfile installs netbase too)"
-    MSYS_NO_PATHCONV=1 docker build -q -t "$TOOLS_IMAGE" - >/dev/null <<EOF || die "tools image build failed"
+    if ! docker image inspect "$TOOLS_IMAGE" >/dev/null 2>&1; then
+        log "building $TOOLS_IMAGE (s3270 and netbase pinned by upstream/debian/packages.lock.json)"
+        apt_run=$($DEBPINS install-line tools) || die "debpins: lock invalid"
+        MSYS_NO_PATHCONV=1 docker build -q -t "$TOOLS_IMAGE" - >/dev/null <<EOF || die "tools image build failed"
 FROM $HERC_IMAGE
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends s3270 netbase && rm -rf /var/lib/apt/lists/*
+RUN $apt_run
 USER ose
 EOF
+    fi
+    verify=$($DEBPINS verify-line tools) || die "debpins: lock invalid"
+    MSYS_NO_PATHCONV=1 docker run --rm "$TOOLS_IMAGE" sh -c "$verify" \
+        || die "$TOOLS_IMAGE does not carry the pinned tool packages"
+    MSYS_NO_PATHCONV=1 docker run --rm "$TOOLS_IMAGE" sh -c "$($DEBPINS verify-line hercules)" \
+        || die "$TOOLS_IMAGE does not carry the pinned Hercules-image packages"
 }
 
 # Non-admin user for the JES2 job and TSO: from upstream users.conf in the
@@ -56,23 +69,27 @@ ipl1() { tools_image; run_ipl ipl1; finish ipl1; }
 ipl2() {
     tools_image
     set -- $(creds); u=$1; p=$2
+    # R03-4: the handshake files are named by a per-invocation run ID, and
+    # mvs-smoke.py deletes every older ipl2 marker before Hercules starts.
+    run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+    ready="$SMOKE_EV/ipl2-$run_id-ready"; done_f="$SMOKE_EV/ipl2-$run_id-tso-done"
     run_ipl ipl2 --jes2 /ose/jcl/smoke/jes2-smoke.jcl --expect BR14=0000,PLANT=0004 \
-        --user "$u" --password "$p" --hold-for-tso 900
+        --user "$u" --password "$p" --hold-for-tso 900 --run-id "$run_id"
     # wait until MVS is up and the JES2 check is done, then run the TSO smoke
     i=0
-    until MSYS_NO_PATHCONV=1 docker exec "$NAME" test -f "$SMOKE_EV/ipl2-ready" 2>/dev/null; do
+    until MSYS_NO_PATHCONV=1 docker exec "$NAME" test -f "$ready" 2>/dev/null; do
         i=$((i + 1)); [ $i -lt 600 ] || break
         docker ps -q --filter "name=$NAME" --filter status=running | grep -q . || break
         sleep 3
     done
     tso_rc=1
-    if MSYS_NO_PATHCONV=1 docker exec "$NAME" test -f "$SMOKE_EV/ipl2-ready" 2>/dev/null; then
+    if MSYS_NO_PATHCONV=1 docker exec "$NAME" test -f "$ready" 2>/dev/null; then
         set +e
         MSYS_NO_PATHCONV=1 docker exec -e TSO_USER="$u" -e TSO_PASS="$p" "$NAME" \
             python3 -I /ose/scripts/lib/tso-smoke.py --evidence "$SMOKE_EV"
         tso_rc=$?
         set -e
-        MSYS_NO_PATHCONV=1 docker exec "$NAME" touch "$SMOKE_EV/ipl2-tso-done"
+        MSYS_NO_PATHCONV=1 docker exec "$NAME" touch "$done_f"
     fi
     set +e; finish ipl2; ipl_rc=$?; set -e
     echo "ipl2: mvs-smoke rc=$ipl_rc tso-smoke rc=$tso_rc"

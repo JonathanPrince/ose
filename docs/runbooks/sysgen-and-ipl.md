@@ -10,6 +10,7 @@ Last verified: 2026-11-26, branch `task/OSE-003-build-host-sysgen`, on the build
 ## 1. Sysgen: `make sysgen` (= `sh scripts/sysgen.sh run`)
 The run takes place in the Docker volume `ose-sysgen-1` (override with `DASD_VOLUME=`), not on the bind mount. It follows `upstream/sysgen/MANIFEST.md` steps 1–3b:
 - check out sysgen `4746195d` with LF line endings and apply patch P-01;
+- **step 1b, on every run, including a resume of an existing volume:** the tree must be exactly the pin plus P-01. HEAD must be `4746195d`, and the tracked files must hash to the same git tree as the pin with P-01 applied. Untracked build products (`temp/`, `MVSCE/`, logs) are not compared; the RAKF and MVP clones among them are checked next. If anything differs, the run stops with RC 10 before any upstream code runs, and the differing paths are listed in `wrapper.log`;
 - pre-stage RAKF at `941b07dc` and MVP at `4c004a59` at the paths sysgen uses;
 - validate them with `pins.py` **before** sysgen starts;
 - run `./sysgen.py --keep-temp --keep-backup --timeout 3600 --version ose-003 --CONTINUE`, with up to `ATTEMPTS=3` tries;
@@ -19,7 +20,7 @@ The run takes place in the Docker volume `ose-sysgen-1` (override with `DASD_VOL
 | Outcome | RC | Meaning |
 |---|---|---|
 | success | 0 | `run-summary.txt: sysgen run rc=0 elapsed=…` |
-| 10 | pin validation failed | sysgen was **not** started; see `pins-pre.txt` |
+| 10 | source or pin validation failed | sysgen was **not** started; see `wrapper.log` (step 1b: sysgen tree) or `pins-pre.txt` (step 3: RAKF, MVP). A refused volume is not repaired: start again in a new volume |
 | 20 | sysgen failed `ATTEMPTS` times | see `sysgen-attempt-N.out` and `.log`; run it again (it continues from `.step`). A second hang counts as an escalation: the card goes BLOCKED |
 | 30 | post-run pin check failed | the build is invalid; see `pins-post.txt` |
 
@@ -69,7 +70,9 @@ Do not press Enter while TSO is still processing the logon. On 2026-11-26 that b
 3. `IEE334I HALT     EOD SUCCESSFUL`
 4. Hercules exits with RC 0.
 
-A shutdown that needs the `quit` fallback counts as a failure.
+The smoke requires all three messages, **in this order and after its own shutdown request** (R03-3). It fails if any is missing, if Hercules had already exited before the request, if Hercules' RC is not 0, or if the `quit` fallback was needed. `ipl*-result.txt` records `shutdown_messages`, `shutdown_missing` and `exited_before_shutdown`.
+
+**TSO handshake** (R03-4): in IPL 2, `mvs-smoke.py` (in the container) and `smoke.sh` (on the host) coordinate through two files, `ipl2-<run-id>-ready` and `ipl2-<run-id>-tso-done`. The run ID is new for every `smoke.sh` invocation, and `mvs-smoke.py` deletes every older `ipl2-*` marker before Hercules starts. A previous run's files can therefore neither start TSO early nor end the IPL before this run's TSO check. If no `tso-done` arrives within 900 s, IPL 2 fails.
 
 Evidence: `artifacts/evidence/ose-003/smoke/`:
 - `ipl1-*` and `ipl2-*`: `hercules.log`, `mvslog.txt` and `result.txt`;

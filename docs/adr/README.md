@@ -14,6 +14,7 @@
 | [0003](0003-m0-build-host.md) | M0 build host on a Windows workstation | Proposed (open options) |
 | [0004](0004-dependency-pinning.md) | Dependency pinning and upstream patch policy | Proposed |
 | [0005](0005-pins-for-components-sysgen-does-not-pin.md) | Pins for components Sysgen does not pin (toolchain, Hercules, MVP) | Proposed |
+| [0006](0006-hercules-direct-build-and-debian-package-pins.md) | Build Hercules directly at its pinned commit; pin build-host Debian packages (supersedes part of 0005 §2) | Proposed |
 
 Architecture ADRs (execution model, service ABI, identity) are **deliberately not written yet**. OSE-010 produces them from M0 evidence.
 

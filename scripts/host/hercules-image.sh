@@ -17,17 +17,17 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 
 fetch hyperion https://github.com/SDL-Hercules-390/hyperion.git "$HERCULES_COMMIT"
 mkdir -p "$EVID"
+# ADR-0006 (proposed): all apt packages from one Debian snapshot; Regina pinned
+# by version and .deb SHA-256 (upstream/debian/packages.lock.json).
+PY=${PYTHON:-$(command -v python3 2>/dev/null || command -v python)}
+APT_RUN=$("$PY" -I "$ROOT/scripts/lib/debpins.py" install-line hercules) || die "debpins: lock invalid"
 
 log "building $HERC_IMAGE from $CACHE/hyperion"
 MSYS_NO_PATHCONV=1 docker build --progress=plain -t "$HERC_IMAGE" \
     -f - "$(hostpath "$CACHE/hyperion")" > "$EVID/hercules-image-build.log" 2>&1 <<EOF || die "image build failed (log: artifacts/evidence/ose-003/hercules-image-build.log)"
 FROM $IMAGE_BASE
-RUN apt-get update && apt-get install -y --no-install-recommends \\
-      build-essential cmake flex gawk m4 autoconf automake libtool-bin libltdl-dev \\
-      libbz2-dev zlib1g-dev libcap2-bin git ca-certificates time \\
-      python3 tar xz-utils bzip2 procps iproute2 netcat-openbsd \\
-      regina-rexx libregina3-dev \\
- && rm -rf /var/lib/apt/lists/* && useradd -u 1000 -m ose
+RUN $APT_RUN
+RUN useradd -u 1000 -m ose
 COPY --chown=ose:ose . /src/hyperion
 USER ose
 RUN git config --global --add safe.directory /src/hyperion \\
@@ -43,6 +43,7 @@ WORKDIR /work
 EOF
 
 MSYS_NO_PATHCONV=1 docker run --rm "$HERC_IMAGE" sh -c 'hercules --version 2>&1 | head -3; \
-    dpkg-query -W -f="\${Package}=\${Version}\n" gcc make python3 git cmake libbz2-dev zlib1g-dev' \
+    dpkg-query -W -f="\${Package}=\${Version}\n" gcc make python3 git cmake libbz2-dev zlib1g-dev regina-rexx libregina3 libregina3-dev; \
+    grep -h "^deb " /etc/apt/sources.list' \
     > "$EVID/hercules-version.txt" 2>&1 || die "image smoke test failed"
 cat "$EVID/hercules-version.txt"

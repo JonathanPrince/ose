@@ -30,7 +30,14 @@ EOF
 then ok "script pins match dependencies.lock.json (hercules, sysgen, rakf, mvp)"
 else fail "script pins differ from dependencies.lock.json (above)"; fi
 
-if docker image inspect "$HERC_IMAGE" >/dev/null 2>&1; then ok "image $HERC_IMAGE present"
+if "$PY" -I "$ROOT/scripts/lib/debpins.py" check; then ok "Debian package pins valid (upstream/debian/packages.lock.json)"
+else fail "upstream/debian/packages.lock.json invalid (above)"; fi
+
+if docker image inspect "$HERC_IMAGE" >/dev/null 2>&1; then
+    ok "image $HERC_IMAGE present"
+    if MSYS_NO_PATHCONV=1 docker run --rm "$HERC_IMAGE" sh -c "$("$PY" -I "$ROOT/scripts/lib/debpins.py" verify-line hercules)"
+    then ok "image carries the pinned Debian packages (regina-rexx, libregina3, libregina3-dev)"
+    else fail "image packages differ from upstream/debian/packages.lock.json: rebuild with scripts/host/hercules-image.sh"; fi
 else fail "image $HERC_IMAGE missing: run scripts/host/hercules-image.sh"; fi
 
 # --- inside the build container ----------------------------------------------
@@ -50,10 +57,17 @@ if docker image inspect "$HERC_IMAGE" >/dev/null 2>&1; then
         command -v git >/dev/null && o "git $(git --version | cut -d" " -f3)" || f "git missing"
         for p in 3270 3505 3506 8888; do
             if (exec 3<>/dev/tcp/127.0.0.1/$p) 2>/dev/null; then f "port $p already in use in the container"; else o "port $p free"; fi
-        done' 2>&1)
-    echo "$out"
+        done
+        echo "doctor-container-checks-complete"' 2>&1)
+    run_rc=$?
+    echo "$out" | grep -v '^doctor-container-checks-complete$'
     n=$(printf '%s\n' "$out" | grep -c '^FAIL')
     fails=$((fails + n))
+    # R03-2: a container that failed to start, or died part-way, prints no FAIL
+    # lines. Require both RC 0 and the completion sentinel.
+    if [ "$run_rc" -ne 0 ]; then fail "in-container checks: docker run exited $run_rc"
+    elif ! printf '%s\n' "$out" | grep -qx 'doctor-container-checks-complete'; then
+        fail "in-container checks did not complete (no completion line)"; fi
 fi
 
 [ "$fails" -eq 0 ] && { echo "doctor: all checks passed"; exit 0; }

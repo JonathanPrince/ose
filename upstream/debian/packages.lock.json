@@ -1,0 +1,81 @@
+{
+ "schema_version": 1,
+ "description": "Build-host Debian package inventory (ADR-0006, proposed). Every apt install in the OSE-003 images reads from this one immutable Debian snapshot. Packages that OSE drives directly are also pinned by version and .deb SHA-256, checked before install and re-checked by version on every use. Read by scripts/lib/debpins.py.",
+ "base_image": "debian@sha256:e67eeead736ff7bbe258ef088bff683635c561b1fcfefad0806c1df4ab49ce0e",
+ "snapshot": {
+  "timestamp": "20261123T000000Z",
+  "evidence": "the timestamp the base image itself records in /etc/apt/sources.list.d/debian.sources (comment lines), observed 2026-11-27",
+  "sources": [
+   "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20261123T000000Z bookworm main",
+   "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20261123T000000Z bookworm-updates main",
+   "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20261123T000000Z bookworm-security main"
+  ]
+ },
+ "unhashed_build_packages": {
+  "hercules": ["build-essential", "cmake", "flex", "gawk", "m4", "autoconf", "automake", "libtool-bin", "libltdl-dev", "libbz2-dev", "zlib1g-dev", "libcap2-bin", "git", "ca-certificates", "time", "python3", "tar", "xz-utils", "bzip2", "procps", "iproute2", "netcat-openbsd"],
+  "tools": [],
+  "note": "Version fixed by the snapshot and verified by apt against the snapshot's signed index; versions actually installed are recorded in artifacts/evidence/ose-003/hercules-version.txt. Not hashed individually: they build Hercules, which is itself checked by its 293-test suite and by version and commit."
+ },
+ "packages": [
+  {
+   "name": "regina-rexx",
+   "image": "hercules",
+   "role": "REXX interpreter required by the Hercules test suite (make check); hercules-helper installs it too",
+   "version": "3.6-2.4",
+   "arch": "amd64",
+   "filename": "pool/main/r/regina-rexx/regina-rexx_3.6-2.4_amd64.deb",
+   "size": 264508,
+   "sha256": "cf75a92c5f23e1f40ca4f244f409334d1313e80e1c490ef51b29e984506e07ea",
+   "license_spdx": "LGPL-2.0-or-later",
+   "license_evidence": "/usr/share/doc/libregina3/copyright: 'Library General Public License ... version 2 of the License, or (at your option) any later version'"
+  },
+  {
+   "name": "libregina3",
+   "image": "hercules",
+   "role": "Regina runtime library (dependency of regina-rexx)",
+   "version": "3.6-2.4",
+   "arch": "amd64",
+   "filename": "pool/main/r/regina-rexx/libregina3_3.6-2.4_amd64.deb",
+   "size": 238732,
+   "sha256": "43c7c3124eede9e000d7026b3198c0187f9131f1fff83d3fa2f0af0ebbd656a4",
+   "license_spdx": "LGPL-2.0-or-later",
+   "license_evidence": "as regina-rexx (same source package)"
+  },
+  {
+   "name": "libregina3-dev",
+   "image": "hercules",
+   "role": "Regina headers, so Hercules configure enables REXX support",
+   "version": "3.6-2.4",
+   "arch": "amd64",
+   "filename": "pool/main/r/regina-rexx/libregina3-dev_3.6-2.4_amd64.deb",
+   "size": 241936,
+   "sha256": "003925b1730c88e0b24b54ba5105711753b7d13d09d1a2073722da606ac67848",
+   "license_spdx": "LGPL-2.0-or-later",
+   "license_evidence": "as regina-rexx (same source package)"
+  },
+  {
+   "name": "s3270",
+   "image": "tools",
+   "role": "Scripted 3270 client for the TSO smoke test (OSE-003 acceptance test 5)",
+   "version": "4.1ga10-1.1+b1",
+   "arch": "amd64",
+   "filename": "pool/main/i/ibm-3270/s3270_4.1ga10-1.1+b1_amd64.deb",
+   "size": 409892,
+   "sha256": "3625e0a5e7f19754baad1ab1ee3c8c067260750c04e04e7fe6c91bd4d9dbac4e",
+   "license_spdx": "UNRESOLVED",
+   "license_evidence": "/usr/share/doc/s3270/copyright (DEP-5) names licenses x3270, x3270+xterm, cme, keysym2ucs, ncd, pr3270: BSD-style permissive texts not mapped to SPDX ids here. Test tool only, never shipped."
+  },
+  {
+   "name": "netbase",
+   "image": "tools",
+   "role": "/etc/protocols and /etc/services; s3270 and Python socket.getprotobyname need them (upstream sysgen Docker/Dockerfile installs it too)",
+   "version": "6.4",
+   "arch": "all",
+   "filename": "pool/main/n/netbase/netbase_6.4_all.deb",
+   "size": 12800,
+   "sha256": "29b23c48c0fe6f878e56c5ddc9f65d1c05d729360f3690a593a8c795031cd867",
+   "license_spdx": "GPL-2.0",
+   "license_evidence": "/usr/share/doc/netbase/copyright (DEP-5): 'License: GPL-2' (only vs or-later not stated in that field)"
+  }
+ ]
+}

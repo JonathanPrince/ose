@@ -13,8 +13,16 @@ build-time marker "$HASP099 ALL AVAILABLE FUNCTIONS COMPLETE" does not appear at
 IPL; IPL completion is the sequence IPL_SEQUENCE below, taken from that log.
 
 Usage: python3 -I mvs-smoke.py --mvsce DIR --evidence DIR --tag NAME
-           [--jes2 JOB.jcl --expect STEP=RC,... --user U --password P] [--hold-for-tso SECONDS]
-Exit 0 only if every expected message and RC was observed and shutdown was clean.
+           [--jes2 JOB.jcl --expect STEP=RC,... --user U --password P]
+           [--hold-for-tso SECONDS --run-id ID]
+Exit 0 only if every expected message and RC was observed and shutdown was clean:
+Hercules exited 0 after our shutdown request, without the quit fallback, and
+SHUTDOWN_SEQUENCE appeared in order after that request (R03-3).
+
+TSO handshake (R03-4): with --hold-for-tso this script writes
+<tag>-<run-id>-ready and waits for <tag>-<run-id>-tso-done. The run ID is unique
+per invocation (scripts/smoke.sh), and every older marker for the tag is
+removed before Hercules starts, so a previous run's files are never trusted.
 """
 import argparse
 import re
@@ -32,6 +40,14 @@ IPL_SEQUENCE = [
     ("IEE041I", r"IEE041I THE SYSTEM LOG IS NOW ACTIVE"),
     ("IST020I", r"IST020I +VTAM INITIALIZATION COMPLETE"),
     ("IKT007I", r"IKT007I TCAS ACCEPTING LOGONS"),               # TSO ready
+]
+# (message ID, regex) that a clean shutdown must log, in this order, after the
+# shutdown request (R03-3). Observed on every OSE-003 run: $HASP099 appears only
+# at shutdown, then JES2 termination, then the halt.
+SHUTDOWN_SEQUENCE = [
+    ("$HASP099", r"\$HASP099 ALL AVAILABLE FUNCTIONS COMPLETE"),
+    ("$HASP085", r"\$HASP085 JES2 TERMINATION COMPLETE"),
+    ("IEE334I", r"IEE334I HALT +EOD SUCCESSFUL"),
 ]
 IPL_TIMEOUT = 900
 JOB_TIMEOUT = 600
@@ -54,6 +70,8 @@ class Herc:
             text=True, errors="replace")
         threading.Thread(target=self._drain, daemon=True).start()
         self.quit_fallback = False
+        self.stop_mark = None
+        self.exited_early = False
 
     def _drain(self):
         for line in self.p.stdout:
@@ -95,7 +113,10 @@ class Herc:
         self.p.stdin.flush()
 
     def stop(self):
-        if self.p.poll() is None:
+        self._poll()
+        self.stop_mark = len(self.console)     # shutdown messages must come after this
+        self.exited_early = self.p.poll() is not None
+        if not self.exited_early:
             self.send("script SCRIPTS/SHUTDOWN.RC")
             try:
                 self.p.wait(STOP_TIMEOUT)
@@ -120,6 +141,28 @@ def step_rcs(printer: Path, jobname: str):
     return rx.findall(text)
 
 
+def shutdown_check(console, start):
+    """Ordered SHUTDOWN_SEQUENCE lines in console[start:]: (lines found, missing IDs)."""
+    found, i = [], start
+    for mid, rx in SHUTDOWN_SEQUENCE:
+        r = re.compile(rx)
+        while i < len(console) and not r.search(console[i]):
+            i += 1
+        if i >= len(console):
+            return found, [m for m, _ in SHUTDOWN_SEQUENCE[len(found):]]
+        found.append(console[i])
+        i += 1
+    return found, []
+
+
+def clear_markers(ev: Path, tag: str):
+    """Remove every TSO handshake file of this tag, from any earlier run (R03-4)."""
+    old = [ev / f"{tag}-ready", ev / f"{tag}-tso-done",
+           *ev.glob(f"{tag}-*-ready"), *ev.glob(f"{tag}-*-tso-done")]
+    for f in old:
+        f.unlink(missing_ok=True)
+
+
 def main():
     a = argparse.ArgumentParser()
     a.add_argument("--mvsce", type=Path, required=True)
@@ -130,9 +173,13 @@ def main():
     a.add_argument("--user")
     a.add_argument("--password")
     a.add_argument("--hold-for-tso", type=int, default=0, help="seconds to keep MVS up for the TSO smoke")
+    a.add_argument("--run-id", default="", help="unique per invocation; names the TSO handshake files")
     args = a.parse_args()
+    if args.hold_for_tso and not re.fullmatch(r"[A-Za-z0-9_.-]+", args.run_id):
+        a.error("--hold-for-tso needs --run-id (letters, digits, _ . -)")
     ev = args.evidence
     ev.mkdir(parents=True, exist_ok=True)
+    clear_markers(ev, args.tag)                 # R03-4: never trust an older run's handshake
     result = {"tag": args.tag}
     ok = True
     t0 = time.time()
@@ -174,23 +221,31 @@ def main():
                 ok &= status == "ok"
                 print(f"{args.tag}: step {step} expected {code} got {got.get(step)} {status}")
         if args.hold_for_tso:
-            (ev / f"{args.tag}-ready").write_text("ready\n")
-            print(f"{args.tag}: holding up to {args.hold_for_tso}s for the TSO smoke")
+            ready = ev / f"{args.tag}-{args.run_id}-ready"
+            done = ev / f"{args.tag}-{args.run_id}-tso-done"
+            ready.write_text(f"{args.run_id}\n")
+            print(f"{args.tag}: holding up to {args.hold_for_tso}s for the TSO smoke ({done.name})")
             end = time.time() + args.hold_for_tso
-            while time.time() < end and not (ev / f"{args.tag}-tso-done").exists():
+            while time.time() < end and not done.exists():
                 h._poll()
                 time.sleep(2)
+            if not done.exists():
+                raise TimeoutError(f"TSO smoke did not finish within {args.hold_for_tso}s (no {done.name})")
     except Exception as e:  # noqa: BLE001 - every failure is evidence
         ok = False
         result["error"] = str(e)
         print(f"{args.tag}: ERROR {e}", file=sys.stderr)
     finally:
         rc = h.stop()
-        stopped = [l for l in h.console if re.search(r"IEE334I|\$HASP085|\$HASP099", l)]
-        result.update(hercules_rc=rc, quit_fallback=h.quit_fallback, shutdown_messages=stopped,
+        mark = h.stop_mark if h.stop_mark is not None else len(h.console)
+        stopped, missing = shutdown_check(h.console, mark)
+        result.update(hercules_rc=rc, quit_fallback=h.quit_fallback, exited_before_shutdown=h.exited_early,
+                      shutdown_messages=stopped, shutdown_missing=missing,
                       total_seconds=round(time.time() - t0))
-        if h.quit_fallback or rc != 0:
+        if h.quit_fallback or rc != 0 or h.exited_early or missing:
             ok = False
+            print(f"{args.tag}: unclean shutdown: rc={rc} quit_fallback={h.quit_fallback} "
+                  f"exited_before_shutdown={h.exited_early} missing={missing}", file=sys.stderr)
         (ev / f"{args.tag}-mvslog.txt").write_text("\n".join(h.console) + "\n", encoding="utf-8")
         (ev / f"{args.tag}-result.txt").write_text("\n".join(f"{k}: {v}" for k, v in result.items()) + "\n")
         print(f"{args.tag}: hercules rc={rc} quit_fallback={h.quit_fallback} shutdown={stopped} total {result['total_seconds']}s")

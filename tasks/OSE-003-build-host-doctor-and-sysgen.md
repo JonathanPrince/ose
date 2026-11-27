@@ -1,5 +1,5 @@
 # OSE-003 — Build host doctor and Sysgen wrapper; native TSO/JES smoke
-Status: REVIEW (independent test 6 passed 2026-11-27; changes requested R03-1 through R03-5)
+Status: IMPLEMENTED (rework of R03-1..R03-5 done 2026-11-27; awaiting independent re-review. Independent test 6 passed 2026-11-27)
 Milestone: M0
 Dependencies: OSE-002; OSE-013 (added in the OSE-002 rework); ADR-0003 (accepted). Clone all caches with `core.autocrlf=false` (research sysgen-pins P-9)
 Owner: coordinator session (standard tier)
@@ -86,8 +86,42 @@ ADR-0003, ADR-0004, `dependencies.lock.json`, the sysgen README at the pin (reco
 - Next action:
   - Independent standard-tier review, including test 6 from the runbooks.
   - The OSE-004 guest part (deploy hello; RECEIVE the XMIT), the OSE-011 guest listing and OSE-006 can now use this image under a lease.
-  - The human should decide whether the extra Debian packages (Regina, s3270, netbase) need lock entries.
+  - The extra Debian packages are now pinned in `upstream/debian/packages.lock.json` (see the rework section; ADR-0006 proposed).
 - Usage/cost if available: not metered.
+
+### Rework after review round 1 (R03-1..R03-5), 2026-11-27, author
+Baseline: review/OSE-003-r1 at 8f4ff9f (fast-forwarded into this branch). Evidence: `artifacts/evidence/ose-003/rework-r1/` (main workspace, not in Git). `SHA256SUMS` there has 55 entries; its own SHA-256 is `46a896c7656b3f79606f69272b812c7dcf251beba716c14175520d7100697bd6`.
+
+| Finding | Fix | Regression and guest evidence |
+|---|---|---|
+| R03-1 (P1) resume ran an unchecked sysgen tree | `sysgen-in-container.sh` step 1b runs on every invocation, fresh or resumed. HEAD must equal `SYSGEN_COMMIT`. The tracked working files, staged into a scratch index with objects in a scratch store, must hash to the same git tree as the pin with P-01 applied (`git apply --cached`). Otherwise the run exits 10 before any upstream code runs, listing the differing paths. Untracked build products are not compared; RAKF and MVP stay covered by step 3. | `tests/host/test_harness.py` ResumeAdmission: wrong HEAD, missing P-01, changed and deleted tracked file are refused, sysgen.py never runs; pin + P-01 with untracked products is admitted. On real volumes with the real wrapper: `ose-sysgen-1-negpin` (test-7 copy, tampered `mvslovers.conf`) **refused, RC 10**, path named (`rework-r031-negpin.txt`). Completed build `ose-sysgen-1`, mounted read-only with `ATTEMPTS=0` so no sysgen ran: **admitted**, tree `0987ceab…` = pin + P-01, step-3 pins OK (`rework-r031-admit.txt`, RC 20 by design of `ATTEMPTS=0`). Fresh build below: step 1b ok. |
+| R03-2 doctor passed when its container failed | `doctor.sh` records the `docker run` RC and requires a final completion line from the container. Otherwise it reports `FAIL in-container checks: docker run exited N` or `… did not complete`. | Doctor tests with a fake `docker`: start failure (RC 125) gives RC 1; container dies mid-way gives RC 1; complete run gives RC 0. Real `doctor.sh`: RC 0 (`rework-doctor.txt`). |
+| R03-3 RC 0 accepted without shutdown messages | `mvs-smoke.py` marks the console position at the shutdown request and requires `$HASP099`, `$HASP085`, `IEE334I` **in order after it**. It also fails if Hercules exited before the request, if RC ≠ 0, or if the quit fallback was used. `result.txt` adds `shutdown_missing` and `exited_before_shutdown`. | MvsSmoke tests: no messages, messages only from before the request, premature exit, out of order, partial, RC 1 all give RC 1; a clean sequence gives RC 0. Guest: 4 IPLs below, all `shutdown_missing: []`. |
+| R03-4 stale TSO handshake | `smoke.sh` creates a run ID per invocation. The marker files are `ipl2-<run-id>-ready` and `-tso-done`, and `mvs-smoke.py` deletes every older `ipl2` marker (old and new naming) before Hercules starts. With no `tso-done` for this run within the hold, the run fails; before, the hold simply timed out. `--hold-for-tso` without `--run-id` is a usage error. | MvsSmoke tests: with a planted old `tso-done` the driver waits, then fails, and the old markers are gone; a worker that finishes after 20 polls is waited for and the run passes. Guest: two consecutive `smoke.sh all` runs on `ose-sysgen-1`, both RC 0 (218 s, 194 s). Afterwards the volume holds only run 2's markers. |
+| R03-5 s3270 unpinned; Regina/netbase not inventoried | ADR-0006 (Proposed). New `upstream/debian/packages.lock.json`: all apt installs come from the base image's own snapshot `20261123T000000Z`. regina-rexx, libregina3, libregina3-dev, s3270 and netbase are pinned by version and `.deb` SHA-256, taken from the snapshot's signed index. `scripts/lib/debpins.py` emits the install command (download, `sha256sum -c`, then install, then verify versions). The tools image tag carries the pin-set digest (`…-tools-834605f5b6b7`). doctor and every smoke run re-verify versions in the images. Licences come from the Debian copyright files: Regina LGPL-2.0-or-later, netbase GPL-2.0, s3270 UNRESOLVED (x3270 BSD-style family). | DebPins tests: the lock is valid; the hash check comes before install; a live-mirror source is rejected; a bad hash is rejected; the digest tracks the pins. Hercules image rebuilt with the pins: hash checks OK, `make check` **293/293 OK**, `HHC01413I … 4.9.1.11612-SDL-gee86c4de` (`sysgen3/hercules-image-build.log`, `hercules-version.txt`). Tools image built with the pins: s3270 and netbase `.deb` checks OK. |
+
+Dependency reconciliation (reviewer note): ADR-0006 (Proposed) supersedes only ADR-0005 §2's words "built with hercules-helper v0.9.9". ADR-0005 has a pointer, and the `hercules-helper` lock note now says it is not executed. Accepting ADR-0006 is a human decision.
+
+Commands run (Git Bash, `PYTHON=python`, worktree `ose-wt-003`):
+
+| Command | RC | Result |
+|---|---|---|
+| `python -I scripts/check_repo.py` | 0 | |
+| `python -m unittest discover -s tests/host -v` | 0 | 44 tests, 9 skipped. The skipped T-PIN tests need pin caches, which this worktree lacks; that code is unchanged since review (`test-host.txt`) |
+| new `test_harness.py` against the reviewed tree 8f4ff9f (scratch worktree; only the new test and the debpins files copied in) | — | **15 failures**, i.e. the tests detect R03-1..R03-4 (`test-harness-vs-reviewed-8f4ff9f.txt`) |
+| `sh scripts/host/hercules-image.sh` | 0 | 293/293 |
+| `sh scripts/doctor.sh` | 0 | |
+| `DASD_VOLUME=ose-sysgen-3 sh scripts/sysgen.sh run` (new empty volume) | 0 | attempt 1, **3023 s**; step 1b ok; pins pre/post OK (`rework-sysgen3.txt`, `sysgen3/`) |
+| `DASD_VOLUME=ose-sysgen-1 sh scripts/smoke.sh all`, run twice | 0, 0 | IPLs 10/9 s and 8/9 s; BR14 0000 and PLANT 0004 both times; TSO MVSCE02 READY, TIME and logoff both times; all 4 shutdowns in order (`smoke-1/`, `smoke-2/`) |
+
+Not run: smoke on the new `ose-sysgen-3` (the build is fresh but uses the same pins as `ose-sysgen-1`; smoke was rerun on `ose-sysgen-1`); `sysgen.sh negative-pin` (test 7), whose wrapper path is unchanged apart from step 1b, which a fresh copy of a completed build passes as shown above; the 9 T-PIN tests (no caches in this worktree).
+
+Scope note: the rework touches files outside this card's list, needed by R03-5 and the regression requirement: `tests/host/test_harness.py`, `upstream/debian/packages.lock.json`, `docs/adr/0006-*.md`, `docs/adr/README.md`, a one-line pointer in ADR-0005, and the `hercules-helper` note in `dependencies.lock.json`. No component pin changed.
+
+Lease: taken 2026-11-27T10:33:24Z on volumes `ose-sysgen-3` (new), `ose-sysgen-1` and `ose-sysgen-1-negpin`; released 2026-11-27 after all containers exited. `ose-sysgen-2` and the reviewer's volume were not touched. The old unpinned image `ose-hercules:4.9.1-ee86c4de-tools` is no longer used and can be deleted.
+
+Next action: independent re-review of R03-1..R03-5 (standard or high tier); human decision on ADR-0006.
+
 ## Independent review and gate result
 
 ### Independent review — 2026-11-27
