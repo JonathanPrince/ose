@@ -48,3 +48,7 @@ all ──> 010 (gate)
 **Wave 3 (high tier, no guest needed):** 007 after 005; 008 after 004.
 
 The critical path is 002 → 013 → 003 → 004-guest → 006 → 010. ADR-0003 is accepted (option A). The earliest open decisions are approving OSE-013 and choosing the OSE-002 gate option (docs/status.md).
+
+## Reusable development environment follow-up (human direction, 2026-11-27)
+
+OSE-014 tracks the separate repository export after the M0 gate (OSE-010). It prepares a reusable foundation for other MVP package projects, with an actual MVP install test, second independent example and export/license review (spec §5.1). It does not change the existing M0 dependency graph or authorize publication. Reuse boundaries should guide harness work during M0.

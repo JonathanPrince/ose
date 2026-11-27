@@ -101,3 +101,7 @@ Reviewed b5cbb7d: 44 host tests (35 pass, 9 skipped), healthy real-tree read-onl
 ## OSE-003 focused re-review — 2026-11-27
 
 85414c2 VERIFIED: R03-1 fail-open path closed, independent missing/invalid patch cases now return 10, host suite 41 passed/9 skipped, and no new findings. R03-2..5 and runtime evidence remain accepted from prior reviews; ADR-0006 is recorded accepted by the human. No new guest run or lease. Human owns integration.
+
+## Reusable development environment direction — 2026-11-27
+
+The human requested a separate repository that reuses the M0 development foundation for other MVS/CE MVP package projects. Spec §§1.1/4.1/5.1 now define the boundary and export gate; OSE-014 is BACKLOG after the existing M0 gate, independent of M1–M5. Export acceptance requires clean independent reproduction, a real MVP package installation, a second example using shared harness code, recovery/evidence checks, license/provenance review and a versioned OSE consumption plan. Extraction and publication have not started; repository destination and release remain human decisions. Existing M0 security gates remain in force.

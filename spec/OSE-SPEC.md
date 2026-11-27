@@ -1,11 +1,16 @@
 # OSE — Open Systems Environment for MVS/CE
 
-**Engineering specification v0.1 | 26 November 2026 | Proposed, not implemented**
+**Engineering specification v0.2 | 27 November 2026 | Design and acceptance requirements; implementation status in docs/status.md**
 
 ## 1. Mission and scope
 Build a reproducible, native UNIX-style subsystem for MVS 3.8j under Hercules, distributed as an optional MVS/CE Sysgen profile. OSE shall reuse MVS scheduling, storage, I/O and security rather than run a second OS or hide a Linux service behind a terminal. The long-term ambition is an independent, OpenEdition-inspired environment for historical computing, software development and mainframe security research. It is not IBM USS, a certified UNIX implementation, or a production security boundary until independently demonstrated.
 
 First release: persistent hierarchical files, interactive TSO shell, compiled C programs, spawn/wait, pipes, identity and file permissions, reproducible install and recovery. Later: isolated processes, networking, richer POSIX compatibility, MVS resource adapters, package ecosystem. Explicitly defer fork, mmap, ELF, full job control, setuid, modern TLS and kernel modifications until justified. Maintain an explicit support matrix; unsupported calls return ENOSYS rather than silently emulating incompatible semantics.
+
+### 1.1 Reusable MVS/CE development environment
+M0 shall also establish a development environment that can serve projects building other MVP packages for MVS/CE. Once that foundation is independently verified, extract it into a separate repository that other projects can clone or use as a template. This is a planned deliverable with its own export gate (§5.1), independent of the later OSE subsystem release. OSE shall use the same reusable build, deploy and test foundation so improvements can benefit other packages.
+
+The exported foundation shall provide pinned host tools and dependencies, reproducible compilation/linking, isolated MVS/CE guest provisioning, deployment, batch and TSO acceptance checks, evidence capture, recovery runbooks and an MVP package example. Package projects supply their own source, metadata, dependencies, target data sets, installation jobs and acceptance tests. They shall be usable without the OSE shell, process service, filesystem extensions or privileged components. Additional toolchains may reuse the guest/test facilities, but only independently demonstrated language/runtime combinations are supported.
 
 ## 2. Upstream evidence and dependency policy
 The following documentation was checked for this specification; exact commits and interoperability must be established in M0.
@@ -89,12 +94,17 @@ artifacts/                  # ignored logs, dumps, manifests
 ```
 Proposed stable commands (implement and document in M0): `make doctor`, `make fetch`, `make build`, `make sysgen`, `make deploy`, `make test-host`, `make test-guest`, `make test-security`, `make package`, `make restore`. Use a non-root Linux build host (Debian/Ubuntu initially to match upstream); VS Code optional; no IDE-specific requirement. Pin emulator and tools; support clean isolated guest volumes, configurable ports and safe stop/restart. Never run concurrent guest-mutating tasks against same emulator or DASD. Avoid requiring proprietary model clients or APIs for normal build. All commands exit nonzero on failure; guest JCL RC and expected output must be parsed, not inferred from successful submission. Keep credentials outside Git, redact logs; no production systems.
 
+### 4.1 Foundation and package project boundary
+Keep reusable host/guest harness code separate from package-specific configuration and tests. Remove HELLO/OSE-specific module names, data set qualifiers, artifact checksums and expected output from shared code as part of extraction; preserve them in the example package. Package configuration shall explicitly select its build inputs, guest target and evidence destination. Retain pin enforcement, nonzero failure status, guest leases/isolation, credential redaction and recovery behavior across projects. Do not introduce a general plugin framework before a second package demonstrates the needed extension points.
+
+The separate repository shall include supported-host setup, a minimal package project layout, documented commands and a tested MVP build/install workflow. Transfer of an XMIT and successful RECEIVE alone do not establish MVP package compatibility. Keep the documented development transfer route distinct from the distributable package format and installation procedure. Record limitations and ownership/versioning of the shared foundation and how OSE consumes its releases; avoid independently maintained copies of the same harness.
+
 ## 5. Milestones and release gates
 Effort bands below are rough person-weeks, not schedules or promises. Re-estimate after M0 and process experiments. M0-M5 form the initial useful release; later milestones optional.
 
 | ID | Deliverable | Dependencies | Effort | Acceptance gate |
 |---|---|---|---|---|
-| M0 | Reproducible baseline and source audit | none | 1–2 | Clean pinned Sysgen build boots twice; native TSO/JES smoke tests; compile/deploy hello; UFSD read/write across two guest clients; dependency/license inventory, actual interfaces and recovery documented. |
+| M0 | Reproducible development baseline and source audit | none | 1–2 | Clean pinned Sysgen build boots twice; native TSO/JES smoke tests; compile/deploy hello; UFSD read/write across two guest clients; dependency/license inventory, actual interfaces and recovery documented. |
 | M1 | Persistent shell and filesystem | M0 | 2–4 | OMVS starts and exits cleanly; external hello and basic commands; persistent files survive IPL; binary roundtrip and failure tests; label single-user lab only. |
 | M2 | Process/IPC feasibility and prototype | M0,M1 | 3–6 | Compare TCB and address-space experiments; spawn/wait/exit; two concurrent compiled programs transfer data through bounded pipe; EOF/backpressure/ABEND cleanup; architecture ADR and measured storage budget. |
 | M3 | Security and isolation | M2 | 3–6 | Distinct RAKF users cannot read/write each other's protected files, forge identity or access handles; alternate access paths closed; unprivileged process isolation proven; audit and recovery tests. If not achieved, release remains single-user experimental. |
@@ -104,6 +114,17 @@ Effort bands below are rough person-weeks, not schedules or promises. Re-estimat
 | M7 | Advanced compatibility research | M5 | open | Separate design and go/no-go for fork, signals, mmap, links, executable formats and richer shell; only advertise tested features. |
 
 M0 decision gates: if UFSD ABI cannot be safely extended, collaborate upstream or build a narrow adapter; if target compiler cannot support required constructs, adapt source rather than replace entire toolchain; if process isolation infeasible, explicitly constrain OSE to trusted single-user environment and reassess. M2 experiments must quantify guest common/private storage, task creation time, concurrent capacity and resource recovery. Do not optimize before measurement. M3 is non-waivable for multi-user release. No release based solely on host mocks.
+
+### 5.1 Development environment export gate
+Prepare the reusable foundation during M0. Export it as a new repository after M0 acceptance and the following checks; this follow-up does not defer or waive any existing M0 or OSE security gate, and need not wait for M1–M5:
+
+1. Close relevant build/deploy/evidence review findings. From a clean checkout, an independent reviewer follows the runbooks to provision the pinned host tools and a disposable guest, compile/link the example, deploy it, verify batch return codes/output and TSO output, and stop/restart or restore the guest. Evidence must be retained per run; failed deployment, missing/stale artifacts and failed evidence export must return failure.
+2. Build a minimal MVP package using the pinned MVP format and tooling, install it on a clean disposable MVS/CE target through the documented MVP installation path, and verify its installed member and behavior. Document package contents, prerequisites, target data sets and repeat installation/removal or rollback behavior actually supported; verify the documented recovery path. Do not describe the current HELLO XMIT deployment as this completed test.
+3. Build and test a second, independent example package with different names, target data sets and expected output using the same shared harness without editing its source. This proves the exported layout can support another project. Neither example may require OSE runtime services.
+4. Review the export contents and dependency/redistribution rights. Include source provenance, pins, checksums, third-party notices, supported-host/toolchain matrix and known limitations. Exclude credentials, private evidence and generated guest images or other materials without established redistribution rights; supply fetch/build recipes where necessary.
+5. Record an extraction manifest, tested foundation version and OSE migration plan, plus a maintainer-approved repository name, destination, license and release decision. Human approval controls repository publication and releases (§9). Validate the extracted tree independently before publication; creating or publishing the external repository is a later explicit action.
+
+Track this follow-up in OSE-014. The gate establishes a reusable MVP package development baseline; it does not imply a new package manager, dependency resolver, compatibility with arbitrary MVS software or completion of the OSE subsystem.
 
 ## 6. Testing and operational acceptance
 Host tests: parsers, registry, serialization, encoding, state machines, boundary cases and fuzzing where practical. Guest tests: actual linked code, MVS service calls, storage behavior, terminal, UFSD and RAKF; record emulator config, commit, test JCL, spool RC, output and elapsed time. Integration: fresh Sysgen, IPL, service startup order, normal workload, clean shutdown, restart after forced termination on disposable volumes, restore. Security: positive and negative matrix for two ordinary users plus admin; permission traversal, identity spoof, handle reuse, unauthorized module and backing-dataset access, malformed lengths, exhaustion and failed audit writes. Fault injection only in disposable guest images. Performance baseline: start latency, concurrent processes, pipe throughput, filesystem throughput, CSA/private allocation and leaks; record trends and establish budgets after M0, not invented targets. Test IDs map to requirements; flaky tests tracked with owner and reproduction. Release gates require all critical tests passing, no unresolved high-severity security defects, documented limitations and reproducible evidence. Store large dumps outside Git with checksum and link. Verify documentation commands against clean environment.
