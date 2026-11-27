@@ -43,7 +43,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | IMPLEMENTED (source part accepted; guest listing done 2026-11-27: no collision; awaiting review) | economy → standard | coordinator |
+| OSE-011 | TSO terminal and name audit | REVIEW (6880303 positive guest listing independently confirmed; R11G-1 incomplete-evidence failure guard requested) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 
@@ -113,3 +113,7 @@ Reviewed 9a57b02 on `review/OSE-004-guest-r1`: changes requested R04G-1 (RECV/CL
 ## OSE-004 guest re-review — 2026-11-27
 
 `c76f088` VERIFIED on `review/OSE-004-guest-r2`, high-tier independent re-review: R04G-1/R04G-2 (author R04-2/R04-3) closed, no new findings. Real stale-library test skips STAGE/RECV/CLEANUP with no second RECEIVE; normal deploy/list, batch 0000/0004 with exact output, TSO CALL7 and smoke IPL pass. Four clean IPL/shutdown cycles; verified exports. Host suite RC0: 59 passed/9 skipped (source caches absent); extra evidence failure mocks fail correctly and retain guest copies. Author's 26 rework hashes and previous review's 32 hashes unchanged. See card for exact commands/evidence and limits. Lease released; all containers stopped; disposable reviewer volume `ose-review-004-r2-20261127` retained stopped. Human merge pending.
+
+## OSE-011 independent guest review — 2026-11-27
+
+Reviewed 6880303 on `review/OSE-011-guest-r1`: positive guest acceptance independently reproduced (32 libraries, 3825 distinct names, no candidate collision; live configuration coverage, catalog and static subsystem table checked). One P2 finding R11G-1: unparsed member lines or missing subsystem dump still yield driver RC0/ok=true; deterministic altered-spool replays retained. Changes requested, source portion remains accepted. Host suite RC0: 69 passed/9 skipped; repo check RC0; author manifest 20/20 verified. See card for exact commands and limits. Lease released; all containers stopped; reviewer volume `ose-review-011-20261127` retained stopped. No merge or push.

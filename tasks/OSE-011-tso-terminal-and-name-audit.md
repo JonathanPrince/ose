@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: IMPLEMENTED (source part accepted 2026-11-26; guest listing, acceptance test 2, done 2026-11-27 on task/OSE-011-guest; awaiting independent review)
+Status: REVIEW (source portion accepted; guest listing independently reproduced at 6880303; changes requested R11G-1 for incomplete-evidence success)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -89,3 +89,29 @@ Host: `python -I scripts/check_repo.py` RC 0; `python -m unittest discover -s te
 Still open (not part of acceptance 2): the terminal probes (TGET ASIS, TPUT FULLSCR, STAX) from a CC/370 program, now possible with the OSE-004 deploy path; the TSO macro manual form numbers.
 
 Next action: independent review of the guest part; then the human decides on the merge.
+
+### Independent guest review — 2026-11-27
+
+Reviewer: Codex, standard tier, independent of author. Reviewed `6880303` against `7146aed` on `review/OSE-011-guest-r1`, separate worktree `artifacts/review/OSE-011-guest-r1`. **Changes requested R11G-1; the positive guest listing and reported no-collision result were independently confirmed.** No implementation edits, merge or push.
+
+**R11G-1 [P2], `tests/guest/audit/run_listing.py:192–200`: incomplete parsing does not make the audit fail.** `unparsed_lines` and `ssn_table` are recorded, but `ok` checks only that each LISTDS command appears, alongside step RCs/shutdown. A replay of the real independently captured spool with an injected unrecognized member line containing OMVS returns RC 0/`ok=true`, records the unparsed line, and still prints OMVS found in none. Replacing the IEFJSSNT listing headings similarly returns RC 0 while `ssn_table.found=false`. These are deterministic mocked orchestration replays, not additional guest runs. Fail with a clear incomplete-audit result when any member/alias line is unparsed or the subsystem dump is absent/undecodable (including missing terminator), and add main-path regression tests proving nonzero status. Preserve the evidence; a genuine parsed name collision can remain a reported finding rather than a command failure. The current complete positive listing remains valid, but the new repeatable audit must not report successful completion for incomplete evidence.
+
+Validation (paths relative to this review worktree):
+
+| Command/check | RC | Result / evidence |
+|---|---|---|
+| `OSE_BASH=C:/Program Files/Git/bin/bash.exe python -I -m unittest discover -s tests/host -v` | 0 | 78 tests: 69 passed, 9 skipped (pinned Sysgen/MVP source caches absent); `artifacts/evidence/review-ose-011/host-tests.txt` |
+| `PYTHON=python DASD_VOLUME=ose-review-011-20261127 sh scripts/audit-listing.sh` | 0 | cold IPL 9s, job OSELIST, ordered clean shutdown, Hercules RC 0, no forced quit; verified export of 4 files; `artifacts/evidence/ose-011/guest/runs/20261127T143940Z-1283/listing/` and wrapper log/RC in reviewer evidence |
+| `python artifacts/evidence/review-ose-011/raw-spool-audit.py` | 0 | independent raw-spool member/alias tokenization matches driver; 32 libraries, 3972 entries / 3825 distinct names, no candidate exact/prefix hit. All 23 concrete library DSNs extracted from live configuration, after resolving procedure defaults and SYSUID, are covered by the 32 listed libraries. Catalog proves OSE prefix and alias absent. Independent text-record decode verifies 400 blank bytes then FFFFFFFF in IEFJSSNT. Results/config excerpt retained |
+| Same raw-spool audit, author manifest verification | 0 | 20/20 hashes match; SHA256SUMS hash e2a9b1b969884818a397c7e99906f0f7223fecfb7fca37f014fe72b72e73f72b |
+| `python artifacts/evidence/review-ose-011/incomplete-evidence.py` | 0 (reproduction script) | baseline driver RC0; unparsed-member and missing-ssn-dump variants each incorrectly driver RC0/ok=true; reproducer and result JSON retained |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | repository/document checks |
+| Read-only credential scan using pinned tools image | 0 | no guest password in saved review/listing evidence |
+
+Observed step RCs: CFGLNK=0000, CFGAPF=0000, CFGSSN=0004 (HMBLIST AMB126I default taken, complete text produced), CFGJES=0000, CFGTSO=0000, CFGLOG=0000, LIST=0004 (catalog entry absent). Independently checked raw catalog and table data, not merely the driver's empty collision array. The pinned Sysgen source `4746195d33d9810bb9dfb0e8a3064a33efbb0559`, `jcl/stage2.jcl`, links IEFJSSNT; actual guest output supports the correction from modern IEFSSNxx assumptions.
+
+The extra runner, shared helper extraction and tests are reasonable scope extensions for repeatable listing/evidence capture. Reviewed `guest_run` argument forwarding and compared the moved export implementation; OSE-004's existing failed/incomplete/successful export tests pass unchanged. No full OSE-004 build/deploy repeat was needed for the mechanical move. Original source/terminal review remains accepted; terminal runtime probes and macro-manual research were not run and remain open as documented. This audit is limited to the pinned static configuration, IBMUSER and MVSCE02 user libraries; it does not reserve names against other users, later packages or dynamically registered subsystems.
+
+Manual lease held before clone/run on disposable `ose-review-011-20261127`, copied from the stopped independent reviewer baseline `ose-sysgen-review-003-20261127`. No author volume mounted. One cold IPL/clean shutdown; all containers stopped, lease released; reviewer volume retained stopped. Reviewer evidence/fixtures are under `artifacts/evidence/review-ose-011/`. Next action: fix R11G-1 and its negative regressions, escalate rework per task conventions, then request focused re-review. Human owns integration.
+
+Review evidence manifest: `artifacts/evidence/review-ose-011/REVIEW-SHA256SUMS`, 23 files; SHA-256 `4dd32b3cbc87dfbaffb61c570b78965bae3b46670c29297df94d4f8a50c68a4a`.
