@@ -112,9 +112,9 @@ Each candidate was searched as a whole token, with no letter, digit or `@#$` on 
 Result: **no collision found in the sources available on the host** (observed). This does **not** cover:
 - the built DASD volumes, which are compressed CCKD and were not decoded;
 - members created during sysgen;
-- `SYS1.PARMLIB(IEFSSN00)`. The sysgen text sources do not define it, so it comes from the starter system or the build, and subsystems registered dynamically, such as UFSD's `UFS1`, are not in it.
+- `SYS1.PARMLIB(IEFSSN00)`. The sysgen text sources do not define it, so it comes from the starter system or the build, and subsystems registered dynamically, such as UFSD's `UFS1`, are not in it. (Observed 2026-11-27: the member does not exist; MVS 3.8j keeps the table in load module IEFJSSNT. See N-4.)
 
-### N-3 Guest listing (not run)
+### N-3 Guest listing (design; result in N-4)
 
 **Revised after review round 1 (2026-11-26).** The reviewer found that the first version of the job left out configured libraries, such as SYSC.PROCLIB, SYSC.LINKLIB and BREXX.LINKLIB, so it could miss collisions. The library list is now derived from the search orders that sysgen at `4746195d` configures. In addition, the job prints the live configuration members, so libraries added after sysgen are caught as well.
 
@@ -127,7 +127,7 @@ Result: **no collision found in the sources available on the host** (observed). 
 | Master-subsystem start path | SYS1.PROCLIB only (the UFSD lesson: a subsystem name equal to a procedure name moves `S name` here) | research 2026-11-26-ufsd-audit, `ufsd:include/ufsd.h:544-561` | documented |
 | TSO CLISTs (implicit commands) | logon proc `SYSPROC`: SYS1.CMDPROC, SYS2.CMDPROC; the logon CLIST then reallocates it to `&SYSUID..CLIST`, SYS1.CMDPROC | `jcl/sysgen05.jcl:81-87, 526` | documented |
 | REXX (BREXX) | `SYSEXEC` SYS2.EXEC, `SYSUEXEC` `&SYSUID..EXEC`, `RXLIB` BREXX.CURRENT.RXLIB (alias of BREXX.RXLIB), and STC execs in SYS2.STCEXEC | `jcl/sysgen05.jcl:529-537`; `jcl/brexxcfg.jcl:29-37, 53-56`; `jcl/finalize.jcl:27-42, 104` | documented |
-| Parameter libraries | SYS1.PARMLIB (IEFSSN00, LNKLST00, IEAAPF00), SYS2.PARMLIB | `jcl/sysgen04.jcl:63-97` | documented |
+| Parameter libraries | SYS1.PARMLIB (LNKLST00, IEAAPF00; IEFSSN00 does not exist on 3.8j, see N-4), SYS2.PARMLIB | `jcl/sysgen04.jcl:63-97` | documented; corrected by observation |
 | Catalog (HLQ `OSE`) | `LISTCAT LEVEL(OSE)`, `LISTCAT ENTRIES('OSE')` (alias) | — | — |
 
 How the job works (`jcl/audit/list-libraries.jcl`):
@@ -135,10 +135,72 @@ How the job works (`jcl/audit/list-libraries.jcl`):
 - Step `LIST` lists the members of every library in the table above. User libraries are covered for IBMUSER only (`IBMUSER.CLIST`, `IBMUSER.EXEC`). Other users' `&SYSUID` libraries cannot be enumerated in advance, which is an accepted residual risk. It only affects that user's own implicit commands.
 - **Completeness check, done when the job is run:** every DSN named in the `CFG*` output must appear among the `LIST` commands. If one is missing, the job is extended and re-run before the collision table is filled in.
 
-The job is read-only and carries no credentials. Expected RCs are in its header. **Status: not run.** It needs the OSE-003 guest and a lease. Card acceptance test 2 stays open until it has run and its RC and output are recorded here. **Hypothesis:** MVS 3.8j TSO `LISTDS … MEMBERS` works in batch under IKJEFT01. If it does not, switch to IEHLIST with volume DDs.
+The job is read-only and carries no credentials. Expected RCs are in its header. **Status: run 2026-11-27, see N-4.**
+### N-4 Guest listing result (2026-11-27, acceptance test 2)
+Run on volume `ose-guest-011` (a copy of `ose-sysgen-1`, sysgen `4746195d` + P-01), user MVSCE02 (not an administrator), with `DASD_VOLUME=ose-guest-011 sh scripts/audit-listing.sh` → **RC 0**. Evidence: `artifacts/evidence/ose-011/guest/runs/20261127T142904Z-1520/listing/` (`listing-result.json`, `listing-prt00e.txt`; export verified by sha256 manifest).
+
+Step RCs, parsed from IEF142I: CFGLNK 0000, CFGAPF 0000, CFGSSN 0004, CFGJES 0000, CFGTSO 0000, CFGLOG 0000, LIST 0004. Expected per the job header: CFG* 0-4 (HMBLIST ends 4 with AMB126I "improper option … default taken", and the listing is produced); LIST 0-12 (RC 4 here comes from `LISTCAT` of the absent `OSE`). The hypothesis in N-3 holds: `LISTDS … MEMBERS` works in batch under IKJEFT01.
+
+What the first runs corrected (all observed):
+- **No `IEFSSNxx` on MVS 3.8j.** `SYS1.PARMLIB(IEFSSN00)` does not exist: CFGSSN ended S013-18 (`IEC141I 013-18 … SYS1.PARMLIB`). Because no step had `COND=EVEN`, every later step was skipped, and the LIST step never ran. The subsystem names table on 3.8j is load module `IEFJSSNT` in `SYS1.LINKLIB` (sysgen `jcl/stage2.jcl` SG37). CFGSSN now dumps it with HMBLIST `LISTLOAD`, and every step has `COND=EVEN`.
+- **IEFJSSNT names no subsystem.** Its text is 400 bytes of blanks up to the `X'FFFFFFFF'` end marker, then the patch area (`*** IEFJSSNT PATCH AREA ***`, `IEFJSSNT UZ17694 04/04/78`). JES2 comes from `PRISUB=` (usermod TNIP800; sysgen `jcl/sysgen01.jcl:546`). UFSD's `UFS1` is registered dynamically. So there is no static table entry that `OSE1` or `OSES` could collide with. A dynamic subsystem of the same name started by some product would still clash at run time; the OSE subsystem must fail cleanly when its name is taken (input for M1).
+- **Completeness check: it found configured libraries that N-3 had missed**, and the job was extended and re-run: `ISF.LINKLIB` (link list and APF; SDSF), `ISF.ISFCLST` (TSO `SYSPROC`, so implicit commands), `SYSGEN.NJE38.AUTHLIB`, `SYS1.VTAMLIB` and `SYS1.INDMAC` (APF), `SYS1.HELP` and `SYS2.HELP` (`SYSHELP`), and the submitter's own `&SYSUID..CLIST` / `.EXEC`. Batch TSO does not prefix unquoted names ("DATA SET CLIST NOT IN CATALOG"), so the runner qualifies them with the user ID. After the extension, every DSN named in the `CFG*` printouts is listed. The only DSN-shaped leftovers are a URL in a procedure comment and this job's own comment.
+- **Aliases count.** The first parser read only plain member lines. On this image many TSO commands exist only as aliases, such as `LISTDS` under `IKJEHDS1` and `DELETE` under `IDCAM01`, and alias lists continue over several lines. The parser now takes every alias, including continuations and names containing `{` (EBCDIC X'C0', e.g. `IGC0013{`). No line was left unparsed.
+
+Libraries searched (32; 3825 distinct member and alias names):
+
+| Library | Names | Result |
+|---|---|---|
+| SYS1.LINKLIB | 935 | listed |
+| BREXX.LINKLIB | 6 | listed |
+| SYS2.LINKLIB | 13 | listed |
+| SYS1.CMDLIB | 308 | listed |
+| SYS2.CMDLIB | 44 | listed |
+| SYSC.LINKLIB | 541 | listed |
+| SYS1.LPALIB | 1554 | listed |
+| SYS1.SVCLIB | 59 | listed |
+| HTTPD.LINKLIB | 5 | listed |
+| MVSMF.LINKLIB | 1 | listed |
+| SYS1.PROCLIB | 48 | listed |
+| SYSC.PROCLIB | 102 | listed |
+| SYS2.PROCLIB | 23 | listed |
+| BREXX.PROCLIB | 2 | listed |
+| SYS1.CMDPROC | 22 | listed |
+| SYS2.CMDPROC | 0 | listed |
+| SYS2.EXEC | 1 | listed |
+| SYS2.STCEXEC | 2 | listed |
+| BREXX.CURRENT.RXLIB | 112 | listed |
+| SYS1.PARMLIB | 36 | listed |
+| SYS2.PARMLIB | 6 | listed |
+| IBMUSER.CLIST | 0 | listed |
+| IBMUSER.EXEC | 0 | listed |
+| ISF.LINKLIB | 1 | listed |
+| ISF.ISFCLST | 1 | listed |
+| SYSGEN.NJE38.AUTHLIB | 13 | listed |
+| SYS1.VTAMLIB | 18 | listed |
+| SYS1.INDMAC | 0 | listed |
+| SYS1.HELP | 66 | listed |
+| SYS2.HELP | 53 | listed |
+| MVSCE02.CLIST | 0 | listed |
+| MVSCE02.EXEC | 0 | listed |
+
+Catalog: `LISTCAT LEVEL(OSE)` → `IDC3012I ENTRY OSE. NOT FOUND`; `LISTCAT ENTRIES('OSE')` → `IDC3012I ENTRY OSE NOT FOUND` (no data set and no alias with HLQ `OSE`).
+
+**Collision table** (whole member or alias names in every library above):
+
+| Candidate | Role | Found in |
+|---|---|---|
+| `OMVS` | command | none |
+| `OSE` | hlq, stc | none |
+| `OSE1` | subsystem | none |
+| `OSED` | stc | none |
+| `OSES` | subsystem | none |
+| `OSH` | command | none |
+
+No candidate is used, and no name in these libraries even starts with one of them. Result: **no collision on the pinned image** (observed). Residual, accepted: other users' `&SYSUID` libraries; dynamic subsystems that only exist while some product runs; procedures in libraries a later MVP package adds. The job prints the live configuration each run and the completeness check catches the last case.
 
 ## Open items
 
-- Guest run of `list-libraries.jcl` (needs OSE-003 and a lease) → closes acceptance test 2.
+- ~~Guest run of `list-libraries.jcl`~~: done 2026-11-27 (N-4); acceptance test 2 closed.
 - Read the TSO terminal macro documentation: the TSO Guide to Writing a Terminal Monitor Program and the TSO/VTAM programming manual for OS/VS2 MVS 3.8. Form numbers are still to be recorded from a primary copy. This confirms A-1's purposes and the authorization rule for inter-user TPUT.
 - Guest probes of TGET ASIS, TPUT FULLSCR and STAX from a CC/370 program (with OSE-004).

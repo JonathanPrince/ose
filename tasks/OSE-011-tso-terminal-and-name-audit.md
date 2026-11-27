@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: REVIEW (source part accepted; guest collision listing remains open)
+Status: VERIFIED (source and guest listing accepted; 5815701 closes R11G-2 on 2026-11-27; human merge pending)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)
@@ -64,3 +64,121 @@ Reviewer: Codex, high tier (escalated re-review following prior changes request)
 Source part accepted. R11-1 resolved: the job now includes SYSC.PROCLIB, SYSC.LINKLIB, BREXX.LINKLIB, SYS1.CMDPROC, SYS2.EXEC and the other documented concatenation members, prints configuration members and requires checking configured DSNs against its LIST coverage before recording a collision result. Rechecked against pinned sysgen jcl/brexxcfg.jcl:21-26, jcl/mvs00.jcl:136-151 and jcl/sysgen05.jcl:526-537. Python assertions confirmed the previously missing LISTDS commands, ASCII-only JCL and <=71 columns (RC 0). Guest RC parsing, effective configuration confirmation and final collision table remain acceptance test 2; no guest listing or terminal exercise ran. Therefore the complete task is not VERIFIED.
 
 Validation in this worktree: `python -I scripts/check_repo.py` -> RC 0; `python -I -m unittest discover -s tests/host -v` -> RC 0, 11 repository tests passed. No guest mutation, dependency change, merge or release. Human owns integration; this review does not alter other task branches.
+
+### Guest part, 2026-11-27 (author: coordinator session, standard tier)
+Branch `task/OSE-011-guest` from main 7146aed. Lease: volume `ose-guest-011` (a new copy of `ose-sysgen-1`), taken 2026-11-27T14:19:36Z and released after the last container exited. Evidence: `artifacts/evidence/ose-011/guest/` (not in Git). `SHA256SUMS` there has 20 entries; its own SHA-256 is `e2a9b1b969884818a397c7e99906f0f7223fecfb7fca37f014fe72b72e73f72b`.
+
+**Acceptance test 2: closed.** Final run `DASD_VOLUME=ose-guest-011 sh scripts/audit-listing.sh` → **RC 0** (`runs/20261127T142904Z-1520/`). Step RCs: CFGLNK, CFGAPF, CFGJES, CFGTSO, CFGLOG `0000`; CFGSSN `0004` (HMBLIST AMB126I, listing produced); LIST `0004` (LISTCAT of the absent HLQ `OSE`). 32 libraries, 3825 member and alias names, nothing unparsed. **No collision for OMVS, OSH, OSE, OSED, OSE1 or OSES**; no name even starts with one of them. HLQ `OSE` has no data set and no alias. The table and residual risks are in research N-4.
+
+| Run | RC | What it showed / changed |
+|---|---|---|
+| 1 `runs/20261127T142139Z-2168` | 1 | `SYS1.PARMLIB(IEFSSN00)` does not exist on 3.8j (S013-18). Without `COND=EVEN` all later steps, including LIST, were skipped. → CFGSSN dumps load module IEFJSSNT (SYS1.LINKLIB) with HMBLIST; every step `COND=EVEN` |
+| 2 `runs/20261127T142354Z-1085` | 1 | All steps ran. The driver was too strict (RC 4 of HMBLIST and LISTCAT, both expected) and the parser missed aliases. The **completeness check** found 7 configured libraries missing from the job (ISF.LINKLIB, ISF.ISFCLST, SYSGEN.NJE38.AUTHLIB, SYS1.VTAMLIB, SYS1.INDMAC, SYS1.HELP, SYS2.HELP) plus `&SYSUID` libraries → job extended; alias parser; CFG* 0-4 |
+| 3 `runs/20261127T142722Z-111` | 0 | Extended job. Unquoted `LISTDS CLIST` is not prefixed in batch TSO → the runner qualifies `&SYSUID` libraries with the user ID |
+| 4 `runs/20261127T142904Z-1520` | 0 | Final. `MVSCE02.CLIST` and `.EXEC` exist and are empty; every DSN named in the configuration printouts is listed |
+
+Files:
+- changed: `jcl/audit/list-libraries.jcl` (IEFJSSNT via HMBLIST, `COND=EVEN`, 9 more libraries, header), `docs/research/2026-11-26-tso-terminal-audit.md` (N-3 corrected, N-4 new);
+- new: `scripts/audit-listing.sh`, `tests/guest/audit/run_listing.py`, `tests/host/test_audit_listing.py` (10 tests);
+- changed `scripts/lib/common.sh` and `scripts/deploy.sh`: `guest_run`, `MANIFEST` and `export_evidence` moved from `deploy.sh` into `common.sh` (`guest_run` is the former `guest()` with the script as a parameter), so this listing uses the same verified evidence export. The OSE-004 fake-docker tests pass unchanged.
+
+The scripts, the common.sh move and the test file are outside this card's file list; the reviewer should check them.
+
+Host: `python -I scripts/check_repo.py` RC 0; `python -m unittest discover -s tests/host` RC 0.
+
+Still open (not part of acceptance 2): the terminal probes (TGET ASIS, TPUT FULLSCR, STAX) from a CC/370 program, now possible with the OSE-004 deploy path; the TSO macro manual form numbers.
+
+Next action: independent review of the guest part; then the human decides on the merge.
+
+### Independent guest review — 2026-11-27
+
+Reviewer: Codex, standard tier, independent of author. Reviewed `6880303` against `7146aed` on `review/OSE-011-guest-r1`, separate worktree `artifacts/review/OSE-011-guest-r1`. **Changes requested R11G-1; the positive guest listing and reported no-collision result were independently confirmed.** No implementation edits, merge or push.
+
+**R11G-1 [P2], `tests/guest/audit/run_listing.py:192–200`: incomplete parsing does not make the audit fail.** `unparsed_lines` and `ssn_table` are recorded, but `ok` checks only that each LISTDS command appears, alongside step RCs/shutdown. A replay of the real independently captured spool with an injected unrecognized member line containing OMVS returns RC 0/`ok=true`, records the unparsed line, and still prints OMVS found in none. Replacing the IEFJSSNT listing headings similarly returns RC 0 while `ssn_table.found=false`. These are deterministic mocked orchestration replays, not additional guest runs. Fail with a clear incomplete-audit result when any member/alias line is unparsed or the subsystem dump is absent/undecodable (including missing terminator), and add main-path regression tests proving nonzero status. Preserve the evidence; a genuine parsed name collision can remain a reported finding rather than a command failure. The current complete positive listing remains valid, but the new repeatable audit must not report successful completion for incomplete evidence.
+
+Validation (paths relative to this review worktree):
+
+| Command/check | RC | Result / evidence |
+|---|---|---|
+| `OSE_BASH=C:/Program Files/Git/bin/bash.exe python -I -m unittest discover -s tests/host -v` | 0 | 78 tests: 69 passed, 9 skipped (pinned Sysgen/MVP source caches absent); `artifacts/evidence/review-ose-011/host-tests.txt` |
+| `PYTHON=python DASD_VOLUME=ose-review-011-20261127 sh scripts/audit-listing.sh` | 0 | cold IPL 9s, job OSELIST, ordered clean shutdown, Hercules RC 0, no forced quit; verified export of 4 files; `artifacts/evidence/ose-011/guest/runs/20261127T143940Z-1283/listing/` and wrapper log/RC in reviewer evidence |
+| `python artifacts/evidence/review-ose-011/raw-spool-audit.py` | 0 | independent raw-spool member/alias tokenization matches driver; 32 libraries, 3972 entries / 3825 distinct names, no candidate exact/prefix hit. All 23 concrete library DSNs extracted from live configuration, after resolving procedure defaults and SYSUID, are covered by the 32 listed libraries. Catalog proves OSE prefix and alias absent. Independent text-record decode verifies 400 blank bytes then FFFFFFFF in IEFJSSNT. Results/config excerpt retained |
+| Same raw-spool audit, author manifest verification | 0 | 20/20 hashes match; SHA256SUMS hash e2a9b1b969884818a397c7e99906f0f7223fecfb7fca37f014fe72b72e73f72b |
+| `python artifacts/evidence/review-ose-011/incomplete-evidence.py` | 0 (reproduction script) | baseline driver RC0; unparsed-member and missing-ssn-dump variants each incorrectly driver RC0/ok=true; reproducer and result JSON retained |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | repository/document checks |
+| Read-only credential scan using pinned tools image | 0 | no guest password in saved review/listing evidence |
+
+Observed step RCs: CFGLNK=0000, CFGAPF=0000, CFGSSN=0004 (HMBLIST AMB126I default taken, complete text produced), CFGJES=0000, CFGTSO=0000, CFGLOG=0000, LIST=0004 (catalog entry absent). Independently checked raw catalog and table data, not merely the driver's empty collision array. The pinned Sysgen source `4746195d33d9810bb9dfb0e8a3064a33efbb0559`, `jcl/stage2.jcl`, links IEFJSSNT; actual guest output supports the correction from modern IEFSSNxx assumptions.
+
+The extra runner, shared helper extraction and tests are reasonable scope extensions for repeatable listing/evidence capture. Reviewed `guest_run` argument forwarding and compared the moved export implementation; OSE-004's existing failed/incomplete/successful export tests pass unchanged. No full OSE-004 build/deploy repeat was needed for the mechanical move. Original source/terminal review remains accepted; terminal runtime probes and macro-manual research were not run and remain open as documented. This audit is limited to the pinned static configuration, IBMUSER and MVSCE02 user libraries; it does not reserve names against other users, later packages or dynamically registered subsystems.
+
+Manual lease held before clone/run on disposable `ose-review-011-20261127`, copied from the stopped independent reviewer baseline `ose-sysgen-review-003-20261127`. No author volume mounted. One cold IPL/clean shutdown; all containers stopped, lease released; reviewer volume retained stopped. Reviewer evidence/fixtures are under `artifacts/evidence/review-ose-011/`. Next action: fix R11G-1 and its negative regressions, escalate rework per task conventions, then request focused re-review. Human owns integration.
+
+Review evidence manifest: `artifacts/evidence/review-ose-011/REVIEW-SHA256SUMS`, 23 files; SHA-256 `4dd32b3cbc87dfbaffb61c570b78965bae3b46670c29297df94d4f8a50c68a4a`.
+
+### Rework after review r1 (R11-G1), 2026-11-27, author
+Baseline: review/OSE-011-guest-r1 at 1486848 (fast-forwarded). Lease on `ose-guest-011`, taken 14:49:39Z and released after the last container exited. New evidence: `runs/20261127T144940Z-268/`, covered by `SHA256SUMS-rework-r1` (5 entries, `ebbcc8244cd8f2e9f68ff7ecaa69334c8dcd13280b30cd106cd39c0a7160dc3b`). The first-round `SHA256SUMS` is unchanged.
+
+**Finding (P2):** the driver returned success with unparsed member lines or without the subsystem dump. **Fix:** `run_listing.py` has one `analyse()` used by `main()` and the tests, and `evidence_problems()` turns each gap into a failure (RC 1, `EVIDENCE INCOMPLETE: …` and `evidence_problems` in the result):
+- a library without LISTDS output;
+- a LISTDS error other than "NOT IN CATALOG". An absent library is evidence; access denied means the library was not searched;
+- any unparsed member line;
+- no IEFJSSNT listing, or one with no bytes or no `X'FFFFFFFF'` end marker;
+- no result for either `LISTCAT` of HLQ `OSE` (new `catalog_result()`). Without it, "HLQ free" has no evidence.
+
+| Check | RC | Result |
+|---|---|---|
+| `python -m unittest tests.host.test_audit_listing` | 0 | 21 tests. New: 8 evidence-gate cases on altered synthetic spools, and 3 replays through `main()` with a fake Hercules (complete → 0; unparsed line → 1; no IEFJSSNT → 1) |
+| the 3 `main()` replays against the reviewed driver 6880303 | — | complete passes; **both damaged replays return 0**, reproducing the finding |
+| guest `DASD_VOLUME=ose-guest-011 sh scripts/audit-listing.sh` | 0 | same result as before; `evidence_problems` empty; catalog `level` and `entries` both "not found"; export verified |
+| `python -I scripts/check_repo.py`; `python -m unittest discover -s tests/host` | 0, 0 | |
+
+Next action: re-review of R11-G1; then the human decides on the merge.
+
+### Independent focused guest re-review — 2026-11-27
+
+Reviewer: Codex, high tier (escalated after failed guest review), independent of author. Reviewed `665604f` against `1486848` on `review/OSE-011-guest-r2`, separate worktree `artifacts/review/OSE-011-guest-r2`. **R11G-1 closed; changes requested for new R11G-2.** No new guest run/lease, implementation edit, merge or push. The existing independent positive guest listing remains accepted.
+
+**R11G-1 closed:** main() now uses the analysis gate, rejecting unparsed members, missing/unterminated subsystem evidence, unexpected LISTDS errors and missing catalog outcomes. Re-ran the previous independent reproduction against the actual saved guest spool: intact baseline returns RC0/ok=true; unparsed-member and absent-subsystem variants now each return RC1/ok=false. Additional independent main-path replay variants with a removed subsystem terminator and a missing catalog result also return RC1. These use mocked orchestration with recorded guest data, not new emulator runs. The five author rework evidence files match their manifest (`ebbcc8244cd8f2e9f68ff7ecaa69334c8dcd13280b30cd106cd39c0a7160dc3b`).
+
+**R11G-2 [P2], `tests/host/test_audit_listing.py:240–241`: replay cleanup corrupts inherited environment on the supported Windows host.** `os.environ.clear()` followed by `update(env)` rewrites unrelated environment entries. In this host environment `GIT_CONFIG_VALUE_0` is present with an empty value; after the new MainReplay tests, Python's mapping still shows it, but native child-process inheritance loses it. A clean `git init` returns RC0 before those tests and RC128 afterward (`error: missing config value GIT_CONFIG_VALUE_0`, `fatal: unable to parse command-line config`). As a result, the full host suite has 11 errors in unchanged ResumeAdmission fixtures. Save and restore only the GUEST_USER/GUEST_PASS keys this helper changes; leave unrelated native environment entries alone, and rerun the full host suite in this Windows environment. This affects test isolation, not the corrected guest evidence gate.
+
+| Command/check | RC | Result / evidence (relative to this worktree) |
+|---|---|---|
+| `OSE_BASH=C:/Program Files/Git/bin/bash.exe python -I -m unittest discover -s tests/host -v` | 1 | 89 total: 69 passed, 11 errors, 9 skipped (source caches absent). All 11 errors occur in ResumeAdmission at `git init` after new replay tests; `artifacts/evidence/review-ose-011-r2/host-tests.txt` and `.rc` |
+| `python artifacts/evidence/review-ose-011-r2/replay-independent.py` | 0 | assertions pass: intact independent guest spool -> driver RC0, four damaged variants -> driver RC1; result JSON/console retained |
+| `python artifacts/evidence/review-ose-011-r2/environment-repro.py` | 0 | reproduction assertions pass: three new MainReplay tests pass individually; same-process git init before RC0, after RC128; `environment-repro.json` |
+| Python SHA-256 check of author rework manifest | 0 | 5/5 files match; `author-manifest.json` |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | structure/doc checks pass |
+
+The environment reproduction explicitly adds the repository to sys.path; an initial scratch invocation omitted that import path and did not run the tests, so it was corrected before drawing the conclusion above. Existing independent guest evidence was copied byte-for-byte with SHA-256 assertions before replay. The new code is data-analysis/test-only; JCL, shared runner, pinning and deployment are unchanged, so no new guest mutation was needed. Terminal runtime probes and macro-manual work remain outside this focused review. Next action: fix R11G-2 and rerun the complete host suite; then focused re-review. Do not mark VERIFIED yet.
+
+Re-review evidence manifest: `artifacts/evidence/review-ose-011-r2/REVIEW-SHA256SUMS`, 25 files; SHA-256 `7ffffd426d18aa62c6cd79d5492931325a002cafb3b279a8fd3da80d7d4d721a`.
+
+### Rework after review r2 (R11-G2), 2026-11-27, author
+Baseline: review/OSE-011-guest-r2 at 41b06c4 (fast-forwarded). Test-only change, so no guest run was needed.
+
+**Finding (P2):** `MainReplay.replay()` restored the environment by `os.environ.clear()` plus a refill from a snapshot. That rewrites the whole process environment and drops keys set meanwhile by other code. **Fix:** a small `only_keys` context manager sets `GUEST_USER` and `GUEST_PASS` and restores exactly those two keys: the old value, or removal if absent. `mock.patch.dict` was tried first and rejected, because it also restores by clearing the mapping and refilling it.
+
+**Regression test** `test_replay_restores_only_its_own_environment_keys`: the fake Hercules sets an unrelated key during `main()`, and `os.environ.clear` is instrumented. With the fix, no clear happens, the unrelated key survives, a pre-existing `GUEST_USER` gets its old value back and `GUEST_PASS` is removed. The same test **fails** against the reviewed `replay()` (665604f) and against a `mock.patch.dict` variant (`clear()` called in both).
+
+Checks: `python -m unittest tests.host.test_audit_listing` RC 0 (22 tests); `python -m unittest discover -s tests/host` RC 0; `python -I scripts/check_repo.py` RC 0.
+
+Next action: re-review of R11-G2; then the human decides on the merge.
+
+### Independent focused re-review — 2026-11-27
+
+Reviewer: Codex, high tier (continued escalated re-review), independent of author. Reviewed `5815701` against `41b06c4` on `review/OSE-011-guest-r3`, separate worktree `artifacts/review/OSE-011-guest-r3`. **Accepted; R11G-2 closed; no new findings. OSE-011 VERIFIED, human merge pending.** R11G-1 and the independently repeated positive guest listing remain accepted from the previous reviews.
+
+The replay helper changes/restores only GUEST_USER/GUEST_PASS and uses scoped sys.argv replacement. It no longer clears or rewrites unrelated environment entries. The new regression checks restoration of the modified keys, preservation of an unrelated key introduced during the replay, absence of a whole-environment clear, and restoration of sys.argv.
+
+| Command/check | RC | Result / evidence (relative to this review worktree) |
+|---|---|---|
+| `OSE_BASH=C:/Program Files/Git/bin/bash.exe python -I -m unittest discover -s tests/host -v` | 0 | 90 tests: 81 passed, 9 skipped (pinned Sysgen/MVP source caches absent). All 11 previously failing Git admission fixtures now pass; `artifacts/evidence/review-ose-011-r3/host-tests.txt` and `.rc` |
+| `python artifacts/evidence/review-ose-011-r3/environment-regression.py` | 0 | previous independent same-process reproduction now passes: native git init RC0 before and RC0 after all four MainReplay tests, with inherited empty GIT_CONFIG_VALUE_0 present; JSON/console/RC retained |
+| Python verification of previous review manifest | 0 | 25/25 files unchanged; previous manifest SHA256 7ffffd426d18aa62c6cd79d5492931325a002cafb3b279a8fd3da80d7d4d721a; `previous-review-manifest.json` |
+| `python -I scripts/check_repo.py`; `git diff --check` | 0, 0 | repository/docs checks |
+
+Evidence/fixture root: `artifacts/evidence/review-ose-011-r3/`. The before/after Git reproduction uses a child Python process and temporary disposable repositories; no shared process environment or guest state was changed. This commit changes test isolation only: no guest driver, JCL or shared runner changes. No new guest build/listing, terminal probes, guest lease, dependency change, merge or push. The prior independent guest listing of 32 libraries/3825 distinct names, live configuration coverage, catalog/IEFJSSNT checks and limited no-collision conclusion remain the guest evidence; other users' libraries, later packages and dynamic subsystem names remain the documented limits. Terminal runtime probes and historical macro-manual research are still open beyond this task's accepted audit scope. Next action: human integration of the verified branch.
+
+Final re-review evidence manifest: `artifacts/evidence/review-ose-011-r3/REVIEW-SHA256SUMS`, 7 files; SHA-256 `604ecb15f200d5adb71e7f79f6b9988256c7545b7114d853f0515938b25fdcb0`.

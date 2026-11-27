@@ -2,7 +2,7 @@
 
 Updated: 2026-11-27 by the coordinator (OSE-004 guest part merged to main on the human maintainer's instruction; reusable-MVP spec direction cherry-picked)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
-Guest lease: none held (released by the OSE-004 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004 (OSE-004 deploy target), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
+Guest lease: none held (released by OSE-011 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004, ose-guest-011, reviewer volumes. The next guest task must take the lease first.
 
 ## Summary
 Bootstrap (OSE-001) and the first inventory (OSE-002) are done. ADRs 0001–0005 are accepted; 0003 chose option A, a pinned Debian container.
@@ -43,7 +43,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | REVIEW, source part MERGED (accepted); guest listing pending OSE-003 | economy → standard | — |
+| OSE-011 | TSO terminal and name audit | VERIFIED (5815701 re-review accepted; source and guest listing accepted; human merge pending) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 
@@ -113,3 +113,15 @@ Reviewed 9a57b02 on `review/OSE-004-guest-r1`: changes requested R04G-1 (RECV/CL
 ## OSE-004 guest re-review — 2026-11-27
 
 `c76f088` VERIFIED on `review/OSE-004-guest-r2`, high-tier independent re-review: R04G-1/R04G-2 (author R04-2/R04-3) closed, no new findings. Real stale-library test skips STAGE/RECV/CLEANUP with no second RECEIVE; normal deploy/list, batch 0000/0004 with exact output, TSO CALL7 and smoke IPL pass. Four clean IPL/shutdown cycles; verified exports. Host suite RC0: 59 passed/9 skipped (source caches absent); extra evidence failure mocks fail correctly and retain guest copies. Author's 26 rework hashes and previous review's 32 hashes unchanged. See card for exact commands/evidence and limits. Lease released; all containers stopped; disposable reviewer volume `ose-review-004-r2-20261127` retained stopped. Human merge pending.
+
+## OSE-011 independent guest review — 2026-11-27
+
+Reviewed 6880303 on `review/OSE-011-guest-r1`: positive guest acceptance independently reproduced (32 libraries, 3825 distinct names, no candidate collision; live configuration coverage, catalog and static subsystem table checked). One P2 finding R11G-1: unparsed member lines or missing subsystem dump still yield driver RC0/ok=true; deterministic altered-spool replays retained. Changes requested, source portion remains accepted. Host suite RC0: 69 passed/9 skipped; repo check RC0; author manifest 20/20 verified. See card for exact commands and limits. Lease released; all containers stopped; reviewer volume `ose-review-011-20261127` retained stopped. No merge or push.
+
+## OSE-011 focused re-review — 2026-11-27
+
+665604f closes R11G-1: independent intact guest-spool replay passes; four damaged evidence variants fail correctly. New P2 R11G-2: MainReplay's whole-environment clear/restore removes an inherited empty Git config variable from native Windows inheritance; clean git init RC0 before replay tests, RC128 after. Full host suite: 69 passed, 11 errors, 9 skipped (RC1). Changes requested, not VERIFIED. Author rework hashes 5/5 verified. No new guest run/lease or implementation changes; prior independent guest listing remains valid. See card/evidence on `review/OSE-011-guest-r2`. No merge/push.
+
+## OSE-011 final focused re-review — 2026-11-27
+
+5815701 VERIFIED on `review/OSE-011-guest-r3`: R11G-2 closed, no new findings. Full Windows host suite RC0: 81 passed/9 skipped, including all previously failing Git admission fixtures; independent native git-init probe RC0 before and after replay tests. Prior independent guest listing and R11G-1 closure remain accepted, evidence unchanged (25/25 prior reviewer hashes verified). No new guest work/lease, dependency change, merge or push. See task card for exact commands/evidence and scope. Human integration pending.

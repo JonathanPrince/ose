@@ -82,3 +82,66 @@ creds() {
     MSYS_NO_PATHCONV=1 docker run --rm -v "$DASD_VOLUME:/work:ro" "$HERC_IMAGE" \
         awk '$1 == "MVSCE02" {print $1, $2}' /work/sysgen/users.conf
 }
+
+# --- guest job runner with verified evidence export (OSE-004 R04-3; shared
+# by deploy.sh and audit-listing.sh since OSE-011) ---------------------------
+# sha256 and relative path of every file under a directory, sorted (host and container)
+MANIFEST='import hashlib,os,sys
+r=sys.argv[1]; out=[]
+for d,_,fs in os.walk(r):
+    for f in fs:
+        p=os.path.join(d,f); rel=os.path.relpath(p,r).replace(os.sep,"/")
+        if rel!="console.txt": out.append(hashlib.sha256(open(p,"rb").read()).hexdigest()+"  "+rel)
+sys.stdout.buffer.write(("\n".join(sorted(out)) + "\n").encode())'   # LF on every OS (print gives CRLF on Windows)
+
+# guest_run NAME SCRIPT MODE [args]: run SCRIPT (python, in the pinned tools
+# image) as container NAME on $DASD_VOLUME with --evidence $GUEST_EV/MODE and
+# the MVSCE02 credentials in GUEST_USER/GUEST_PASS; then collect its console
+# (redacted) and export the evidence verified to $OUT/MODE. Callers set OUT
+# (a new host directory) and GUEST_EV (a new guest directory). From OSE-004
+# deploy.sh, generalised unchanged in behaviour for OSE-011.
+guest_run() {
+    NAME=$1; script=$2; mode=$3; shift 3
+    tools_image
+    creds_line=$(creds) || die "cannot read guest credentials from $DASD_VOLUME"
+    u=${creds_line%% *}; p=${creds_line#* }
+    [ -n "$u" ] && [ -n "$p" ] && [ "$u" != "$p" ] || die "no MVSCE02 entry in users.conf"
+    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 \
+        -e GUEST_USER="$u" -e GUEST_PASS="$p" \
+        -v "$(hostpath "$ROOT"):/ose:ro" -v "$DASD_VOLUME:/work" -w /work/sysgen/MVSCE "$TOOLS_IMAGE" \
+        sh -c '[ ! -e "$0" ] && mkdir -p "$0" && s=$1 && shift && exec python3 -I "$s" --evidence "$0" "$@"' \
+        "$GUEST_EV/$mode" "$script" "$@" >/dev/null
+    log "started $NAME ($mode) on $DASD_VOLUME"
+    rc=$(docker wait "$NAME") || { log "docker wait failed"; return 1; }
+    mkdir -p "$OUT/$mode"
+    if ! docker logs "$NAME" > "$OUT/$mode/console.txt" 2>&1; then
+        log "EVIDENCE: docker logs failed; container $NAME kept"; return 1
+    fi
+    docker rm "$NAME" >/dev/null 2>&1 || true
+    sed "s/$p/<redacted>/g" "$OUT/$mode/console.txt" > "$OUT/$mode/console.tmp" && mv "$OUT/$mode/console.tmp" "$OUT/$mode/console.txt"
+    cat "$OUT/$mode/console.txt"
+    export_evidence "$mode" || return 1
+    return "$rc"
+}
+
+# R04-3: copy the guest's evidence to the host and prove the copy complete
+# (same sha256 manifest on both sides) before the guest copy is deleted. Any
+# failure returns nonzero, even when the guest checks passed, and keeps the
+# guest copy in the volume for a retry.
+export_evidence() {
+    m=$1
+    MSYS_NO_PATHCONV=1 docker run --rm -v "$DASD_VOLUME:/work:ro" -v "$(hostpath "$OUT"):/out" "$HERC_IMAGE" \
+        sh -c 'test -d "$0" && cp -R "$0/." "/out/$1/"' "$GUEST_EV/$m" "$m" \
+        || { log "EVIDENCE: export of $GUEST_EV/$m failed; guest copy kept in $DASD_VOLUME"; return 1; }
+    want=$(MSYS_NO_PATHCONV=1 docker run --rm -v "$DASD_VOLUME:/work:ro" "$HERC_IMAGE" python3 -I -c "$MANIFEST" "$GUEST_EV/$m") \
+        || { log "EVIDENCE: cannot hash the guest copy; kept in $DASD_VOLUME"; return 1; }
+    got=$("$PY" -I -c "$MANIFEST" "$OUT/$m") || { log "EVIDENCE: cannot hash $OUT/$m"; return 1; }
+    if [ -z "$want" ] || [ "$want" != "$got" ]; then
+        log "EVIDENCE: host copy $OUT/$m differs from the guest copy (or is empty); guest copy kept in $DASD_VOLUME:$GUEST_EV/$m"
+        return 1
+    fi
+    log "evidence exported and verified ($(printf '%s\n' "$want" | wc -l | tr -d ' ') files): $OUT/$m"
+    MSYS_NO_PATHCONV=1 docker run --rm --user 1000:1000 -v "$DASD_VOLUME:/work" "$HERC_IMAGE" rm -rf "$GUEST_EV/$m" \
+        || log "note: guest copy $GUEST_EV/$m could not be removed (harmless; the host copy is verified)"
+}
