@@ -1,6 +1,6 @@
 # Project status
 
-Updated: 2026-11-26 by the coordinator (OSE-004, 005, 011, 012 and 013 merged to main on the human maintainer's instruction)
+Updated: 2026-11-27 by the coordinator (OSE-003 merged to main on the human maintainer's instruction; ADR-0006 accepted)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
 Guest lease: none held (released by the OSE-003 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (primary), ose-sysgen-2, ose-sysgen-3 (fresh rework build), ose-sysgen-review-003-20261127 (reviewer). The next guest task must take the lease first.
 
@@ -35,8 +35,8 @@ Merged to main after independent review (2026-11-26):
 |---|---|---|---|---|
 | OSE-001 | Repository bootstrap | REVIEW | (coordinator) | coordinator |
 | OSE-002 | Upstream inventory and pins (records pins; gate amended) | MERGED (VERIFIED) | economy, standard review | coordinator |
-| OSE-003 | Build host doctor and sysgen | VERIFIED (85414c2, all findings closed; ADR-0006 accepted; awaiting human merge) | standard | coordinator |
-| OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 pending OSE-003 | standard | — |
+| OSE-003 | Build host doctor and sysgen | MERGED (VERIFIED at 85414c2; ADR-0006 accepted) | standard | coordinator |
+| OSE-004 | CC/370 + MBT hello | REVIEW, host part MERGED (accepted); guest acceptance 2-4 READY (OSE-003 merged) | standard | coordinator |
 | OSE-005 | UFSD interface audit | MERGED (VERIFIED, source-audit scope; runtime gaps tracked) | standard → high | — |
 | OSE-006 | UFSD cross-space tests | BACKLOG (needs OSE-003; inherits OSE-005 hypotheses incl. G-6, G-15) | standard | — |
 | OSE-007 | RAKF/SSI identity audit | BACKLOG (OSE-005 escalations G-1, G-2, G-11, G-12 waiting) | high | — |
@@ -45,7 +45,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
 | OSE-011 | TSO terminal and name audit | REVIEW, source part MERGED (accepted); guest listing pending OSE-003 | economy → standard | — |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
-| OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED, host enforcement; OSE-003 test 7 pending) | standard | — |
+| OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 
 ## Decisions needed from the human
 Resolved 2026-11-26:

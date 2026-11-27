@@ -1,5 +1,5 @@
 # OSE-003 — Build host doctor and Sysgen wrapper; native TSO/JES smoke
-Status: VERIFIED (85414c2 independent focused re-review, 2026-11-27; all findings closed; awaiting human merge)
+Status: MERGED (VERIFIED at 85414c2, independent re-review 2026-11-27; merged to main 2026-11-27 on the human maintainer's instruction)
 Milestone: M0
 Dependencies: OSE-002; OSE-013 (added in the OSE-002 rework); ADR-0003 (accepted). Clone all caches with `core.autocrlf=false` (research sysgen-pins P-9)
 Owner: coordinator session (standard tier)
