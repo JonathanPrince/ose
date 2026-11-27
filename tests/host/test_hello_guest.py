@@ -75,7 +75,27 @@ class DeployJcl(unittest.TestCase):
     def test_gone_check_precedes_stage(self):
         self.assertEqual(self.step_order(), ["DELOLD", "GONE", "STAGE", "RECV", "CLEANUP"])
         self.assertRegex(self.jcl, r"//STAGE\s+EXEC PGM=IEBGENER,COND=\(\(0,NE,DELOLD\),\(4,NE,GONE\)\)")
-        self.assertRegex(self.jcl, r"//RECV\s+EXEC .*COND=\(0,NE,STAGE\)")
+        # R04-2: MVS ignores a COND test naming a bypassed step, so RECV and
+        # CLEANUP must test DELOLD and GONE themselves, not only STAGE.
+        for step in ("RECV", "CLEANUP"):
+            m = re.search(rf"//{step}\s+EXEC [^\n]*\n(//\s+COND=[^\n]*)", self.jcl)
+            self.assertIsNotNone(m, step)
+            self.assertIn("(0,NE,DELOLD)", m.group(1), step)
+            self.assertIn("(4,NE,GONE)", m.group(1), step)
+
+    def test_jcl_columns(self):
+        for n, line in enumerate(self.jcl.splitlines(), 1):
+            if line.startswith("//") and not line.startswith("//*"):
+                self.assertLessEqual(len(line), 71, f"line {n}")
+
+    def test_stale_variant_drops_only_the_target_delete(self):
+        xmit = bytes(80 * 3)
+        normal = [c.decode("cp037").rstrip() for c in cards(hg.deploy_deck(xmit, VALUES))]
+        stale = [c.decode("cp037").rstrip() for c in cards(hg.deploy_deck(xmit, VALUES, omit_target_delete=True))]
+        self.assertIn("  DELETE TUSER.OSE.LOAD NONVSAM SCRATCH PURGE", normal)
+        self.assertNotIn("  DELETE TUSER.OSE.LOAD NONVSAM SCRATCH PURGE", stale)
+        self.assertTrue(stale[0].startswith("//OSEHSTL  JOB"))
+        self.assertEqual(len(normal) - len(stale), 1)
 
     def test_driver_expects_gone_rc4(self):
         src = (ROOT / "tests" / "guest" / "hello" / "hello_guest.py").read_text()
@@ -111,6 +131,101 @@ END
         t = "IEF452I OSEHRUN - JOB NOT RUN - JCL ERROR\nIEF450I OSEHRUN RC0 - ABEND S0C4 U0000\n"
         self.assertEqual(len(hg.job_failures(t, "OSEHRUN")), 2)
         self.assertEqual(hg.job_failures(t, "OSEHDEP"), [])
+
+
+FAKE_DOCKER = r"""#!/bin/sh
+# fake docker for DeployExport; FAKE_MODE = export-fails | export-short | ok
+echo "$*" >> "$FAKE_LOG"
+case "$1" in
+  image) exit 0 ;;
+  rm) exit 0 ;;
+  wait) echo 0; exit 0 ;;
+  logs) echo "fake guest console"; exit 0 ;;
+  run)
+    case "$*" in
+      "run -d "*) exit 0 ;;          # the detached guest container
+      *awk*) echo "MVSCE02 FAKEPW1"; exit 0 ;;
+      *"cp -R"*)
+        [ "$FAKE_MODE" = export-fails ] && { echo "cp: simulated failure" >&2; exit 1; }
+        out=$(printf '%s\n' "$@" | sed -n 's#^\(.*\):/out$#\1#p' | head -1)
+        mode=$(eval "echo \${$#}")
+        mkdir -p "$out/$mode"
+        [ "$FAKE_MODE" = ok ] && printf x > "$out/$mode/a.txt" && printf y > "$out/$mode/b.txt"
+        exit 0 ;;
+      *python3*) # the guest-side manifest: a.txt = "x", b.txt = "y". Two lines, so a
+                 # host manifest joined with CRLF (Windows print) would not match.
+        echo "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881  a.txt"
+        echo "a1fce4363854ff888cff4b8e7875d600c2682390412a8cf79b37d0b11148b0fa  b.txt"; exit 0 ;;
+      *"rm -rf"*) echo "GUEST-COPY-DELETED" >> "$FAKE_LOG"; exit 0 ;;
+      *) exit 0 ;;   # package-pin verification
+    esac ;;
+esac
+exit 0
+"""
+
+
+def find_bash():
+    import os
+    import shutil
+    if os.environ.get("OSE_BASH"):
+        return os.environ["OSE_BASH"]
+    b = shutil.which("bash")
+    if b and "system32" not in b.lower():
+        return b
+    for c in (r"C:\Program Files\Git\bin\bash.exe",):
+        if Path(c).exists():
+            return c
+    return None
+
+
+BASH = find_bash()
+
+
+@unittest.skipUnless(BASH, "bash not found (set OSE_BASH)")
+class DeployExport(unittest.TestCase):
+    """R04-3: deploy.sh must fail when its evidence export fails or is incomplete,
+    and must keep the guest copy until a verified export."""
+
+    def run_deploy(self, mode):
+        import os
+        import shutil
+        import stat
+        import subprocess
+        import sys
+        import tempfile
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        d = tmp / "bin" / "docker"
+        d.parent.mkdir()
+        d.write_text(FAKE_DOCKER, newline="\n")
+        d.chmod(d.stat().st_mode | stat.S_IEXEC)
+        log = tmp / "docker.log"
+        posix = lambda p: str(p).replace("\\", "/")  # noqa: E731
+        env = dict(os.environ, FAKE_MODE=mode, FAKE_LOG=posix(log), PYTHON=posix(Path(sys.executable)),
+                   OSE004_EVIDENCE_ROOT=posix(tmp / "ev"), DASD_VOLUME="fake-volume")
+        cmd = (f'PATH="$(cygpath -u "{posix(d.parent)}" 2>/dev/null || echo "{posix(d.parent)}"):$PATH" '
+               f'sh "{posix(ROOT)}/scripts/deploy.sh" run')
+        p = subprocess.run([BASH, "-c", cmd], env=env, capture_output=True, text=True)
+        return p.returncode, p.stdout + p.stderr, log.read_text() if log.exists() else ""
+
+    def test_export_failure_fails_and_keeps_guest_copy(self):
+        rc, out, log = self.run_deploy("export-fails")
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("EVIDENCE: export", out)
+        self.assertNotIn("GUEST-COPY-DELETED", log)
+
+    def test_incomplete_export_fails_and_keeps_guest_copy(self):
+        rc, out, log = self.run_deploy("export-short")
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("differs from the guest copy", out)
+        self.assertNotIn("GUEST-COPY-DELETED", log)
+
+    def test_verified_export_passes_then_deletes_guest_copy(self):
+        rc, out, log = self.run_deploy("ok")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("exported and verified (2 files)", out)
+        self.assertIn("GUEST-COPY-DELETED", log)
+        self.assertNotIn("FAKEPW1", out)
 
 
 if __name__ == "__main__":

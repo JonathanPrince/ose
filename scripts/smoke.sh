@@ -9,7 +9,7 @@ set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 . "$ROOT/scripts/lib/common.sh"
 NAME=ose-smoke
-SMOKE_EV=/work/evidence/smoke
+SMOKE_EV=   # per invocation, set below with RUN_OUT
 run_ipl() { # tag, extra args for mvs-smoke.py
     tag=$1; shift
     docker rm -f "$NAME" >/dev/null 2>&1 || true
@@ -29,7 +29,7 @@ finish() { # tag -> rc
 export_ev() {
     mkdir -p "$RUN_OUT/smoke"
     MSYS_NO_PATHCONV=1 docker run --rm -v "$DASD_VOLUME:/work:ro" -v "$(hostpath "$RUN_OUT"):/out" "$HERC_IMAGE" \
-        sh -c 'cp -a /work/evidence/smoke/. /out/smoke/ 2>/dev/null; cp /work/sysgen/MVSCE/printers/prt00e.txt /out/smoke/prt00e.txt 2>/dev/null; true'
+        sh -c 'test -d "$0" && cp -R "$0/." /out/smoke/ && cp /work/sysgen/MVSCE/printers/prt00e.txt /out/smoke/prt00e.txt' "$SMOKE_EV"
 }
 
 ipl1() { tools_image; run_ipl ipl1; finish ipl1; }
@@ -67,19 +67,23 @@ ipl2() {
 # Evidence never overwrites earlier evidence (2026-11-27: a fixed export
 # directory let an OSE-004 regression run overwrite OSE-003's checksummed
 # smoke files). Each invocation exports to a directory that must not exist
-# yet, and the volume's own smoke directory is emptied first, so files left
-# by earlier runs are not exported as this run's.
+# yet, and the guest side uses its own per-invocation directory too, so files
+# left by earlier runs are never exported as this run's and nothing earlier is
+# deleted. A failed export makes the run fail (review R04-3) and leaves the
+# guest copy in the volume.
 RUN_OUT="$EVID/smoke-runs/$(date -u +%Y%m%dT%H%M%SZ)-$$"
 [ ! -e "$RUN_OUT" ] || die "$RUN_OUT exists"
 mkdir -p "$RUN_OUT"
-MSYS_NO_PATHCONV=1 docker run --rm --user 1000:1000 -v "$DASD_VOLUME:/work" "$HERC_IMAGE" \
-    sh -c 'rm -rf /work/evidence/smoke && mkdir -p /work/evidence/smoke' || die "cannot reset /work/evidence/smoke in $DASD_VOLUME"
-log "evidence: $RUN_OUT"
+SMOKE_EV="/work/evidence/smoke-runs/${RUN_OUT##*/}"
+log "evidence: $RUN_OUT (guest copy $DASD_VOLUME:$SMOKE_EV)"
 case "${1:-all}" in
     ipl1) ipl1; rc=$? ;;
     ipl2) set +e; ipl2; rc=$?; set -e ;;
     all)  set +e; ipl1; r1=$?; ipl2; r2=$?; set -e; rc=$((r1 | r2)) ;;
     *) echo "usage: $0 [ipl1|ipl2|all]" >&2; exit 2 ;;
 esac
-export_ev
+if ! export_ev; then
+    log "EVIDENCE: export of $SMOKE_EV failed; guest copy kept in $DASD_VOLUME"
+    rc=1
+fi
 exit "$rc"

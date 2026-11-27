@@ -74,11 +74,24 @@ def choose_dlm(records) -> str:
     raise ValueError("no usable DLM")
 
 
-def deploy_deck(xmit: bytes, values: dict) -> bytes:
+TARGET_DELETE = "  DELETE {HLQ}.OSE.LOAD NONVSAM SCRATCH PURGE\n"
+
+
+def deploy_deck(xmit: bytes, values: dict, omit_target_delete=False) -> bytes:
+    """The deploy job with the XMIT in-stream. omit_target_delete drops DELOLD's
+    DELETE of the target library: the negative test for the GONE guard (R04-2),
+    which must then stop STAGE, RECV and CLEANUP."""
     if len(xmit) % CARD:
         raise ValueError(f"XMIT length {len(xmit)} is not a multiple of {CARD}")
     records = [xmit[i:i + CARD] for i in range(0, len(xmit), CARD)]
     tpl = (JCL / "deploy.jcl").read_text(encoding="ascii")
+    if omit_target_delete:
+        if tpl.count(TARGET_DELETE) != 1:
+            raise ValueError("deploy.jcl: target DELETE line not found exactly once")
+        tpl = tpl.replace(TARGET_DELETE, "")
+        if tpl.count("//OSEHDEP  JOB") != 1:
+            raise ValueError("deploy.jcl: job card not found")
+        tpl = tpl.replace("//OSEHDEP  JOB", "//OSEHSTL  JOB")   # own name: its IEF142I lines stay apart
     head, tail = tpl.split("\n{XMIT}\n")
     vals = dict(values, DLM=choose_dlm(records))
     return b"".join(jcl_cards(fill(head, vals)) + records + jcl_cards(fill(tail, vals)))
@@ -223,7 +236,7 @@ def tso_call(tso, ev: Path, user, pw, dsn, parm, result):
 # ------------------------------------------------------------------ main
 def main():
     a = argparse.ArgumentParser()
-    a.add_argument("--mode", choices=("deploy", "run"), required=True)
+    a.add_argument("--mode", choices=("deploy", "deploy-stale", "run"), required=True)
     a.add_argument("--mvsce", type=Path, default=Path("/work/sysgen/MVSCE"))
     a.add_argument("--evidence", type=Path, required=True)
     a.add_argument("--xmit", type=Path)
@@ -238,9 +251,9 @@ def main():
     dsn = f"{user}.OSE.LOAD"
     result = {"mode": args.mode, "dsn": dsn}
     ok = True
-    if args.mode == "deploy":
+    if args.mode in ("deploy", "deploy-stale"):
         if not args.xmit:
-            a.error("--mode deploy needs --xmit")
+            a.error(f"--mode {args.mode} needs --xmit")
         xmit = args.xmit.read_bytes()
         result["xmit_sha256"] = hashlib.sha256(xmit).hexdigest()
         print(f"xmit {args.xmit} sha256 {result['xmit_sha256']} ({len(xmit) // CARD} records)")
@@ -264,6 +277,29 @@ def main():
             result["members"] = members
             print(f"OSEHLST: {dsn} members {members}")
             ok &= good and "HELLO" in members
+        elif args.mode == "deploy-stale":
+            # R04-2 negative test. First a normal deploy, so the target library
+            # exists; then the same deploy without DELOLD's DELETE of it (the
+            # failed-delete case). GONE must end 0000 and STAGE, RECV and
+            # CLEANUP must not execute: no IEF142I for them and no RECEIVE.
+            good, text = run_job(smoke, h, args.mvsce, "OSEHDEP", deploy_deck(xmit, values),
+                                 {"DELOLD": "0000", "GONE": "0004", "STAGE": "0000", "RECV": "0000",
+                                  "CLEANUP": "0000"}, result)
+            ok &= good
+            received_before = text.count("Receive into '")
+            good, text = run_job(smoke, h, args.mvsce, "OSEHSTL",
+                                 deploy_deck(xmit, values, omit_target_delete=True),
+                                 {"DELOLD": "0000", "GONE": "0000"}, result)
+            time.sleep(5)                       # let the printer finish the job
+            text = printer_text(args.mvsce)
+            ran = {s for s, _ in smoke.step_rcs(args.mvsce / "printers" / "prt00e.txt", "OSEHSTL")}
+            not_run = [l.strip() for l in text.split("\n") if re.search(r"OSEHSTL\s+\w+.*NOT (RUN|EXECUTED)", l)]
+            received_after = text.count("Receive into '")
+            guard = {"executed_steps": sorted(ran), "not_run_messages": not_run,
+                     "receives_before": received_before, "receives_after": received_after}
+            result["stale_guard"] = guard
+            print(f"OSEHSTL: {guard}")
+            ok &= good and not (ran & {"STAGE", "RECV", "CLEANUP"}) and received_after == received_before
         else:
             good, text = run_job(smoke, h, args.mvsce, "OSEHRUN", text_deck("run.jcl", values),
                                  {"RC0": "0000", "RC4": "0004"}, result)

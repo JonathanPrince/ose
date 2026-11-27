@@ -1,5 +1,5 @@
 # OSE-004 — CC/370 + MBT hello compile/deploy harness
-Status: REVIEW (host part merged; guest positive acceptance independently passed at 9a57b02; changes requested R04G-1 and R04G-2)
+Status: IMPLEMENTED (host part merged 2026-11-26; guest acceptance 2-5 passed 2026-11-27; R04-2 and R04-3 fixed 2026-11-27; awaiting re-review)
 Milestone: M0
 Dependencies: OSE-002 (host compile); OSE-003 (guest run; a coordination dependency not listed in BOOTSTRAP)
 Owner: author model (standard tier)
@@ -138,3 +138,15 @@ Lease acquired before cloning or running; author volumes never mounted. Disposab
 Next action: fix R04G-1/R04G-2, add the failure-path checks, and request re-review; escalate rework one tier per task conventions. Do not mark VERIFIED yet.
 
 Review evidence sealed: `artifacts/evidence/review-ose-004/REVIEW-SHA256SUMS`, 32 files, manifest SHA-256 `1ce2cc9214136e98115346692d5c0f7ec859ad51eae532c4c5c3559bc25aa504`. Credential scan of reviewer evidence and guest exports: RC 0, no password found. Final `docker ps` empty and shared checkout clean after lease release.
+
+### Rework after review r1 (R04-2, R04-3), 2026-11-27, author
+Baseline: review/OSE-004-guest-r1 at 8e9486c (fast-forwarded). Lease on `ose-guest-004`, taken 13:24:51Z and released after the last container exited. Evidence: the new runs under `artifacts/evidence/ose-004/guest/runs/` are covered by `SHA256SUMS-rework-r1` (26 entries; its own SHA-256 is `89858afb8ea23756663b0b3c5dd416e1dba2746c0e0bbb5bf1383d88b523fd94`). The first-round `SHA256SUMS` (64 entries, `f3c47c45…`) is unchanged: a failed command of mine truncated it, and it was rebuilt byte for byte from the unchanged files (same SHA-256 as recorded above, `sha256sum -c` all OK). A stray directory that the fake-docker test created when run against the reviewed `deploy.sh` was removed after inspection; it held only fake content.
+
+| Finding | Fix | Evidence |
+|---|---|---|
+| R04-2: GONE=0 skipped STAGE, but RECV and CLEANUP still ran (MVS ignores a COND test that names a bypassed step) | `deploy.jcl`: RECV `COND=((0,NE,DELOLD),(4,NE,GONE),(0,NE,STAGE))`; CLEANUP adds `(0,NE,RECV)`. Both lines fit in 71 columns | Host tests: both steps test DELOLD and GONE; JCL columns; the stale variant drops only the target DELETE. **Guest negative test** `sh scripts/deploy.sh stale` (new driver mode `deploy-stale`: a normal deploy, then OSEHSTL without the target DELETE): RC 0. GONE `0000`; `IEF202I OSEHSTL STAGE/RECV/CLEANUP - STEP WAS NOT RUN BECAUSE OF CONDITION CODES` and `IEF272I … NOT EXECUTED.`; executed steps only DELOLD and GONE; RECEIVE count 1 before and after (`runs/20261127T132830Z-409/`) |
+| R04-3: `deploy.sh` succeeded when the evidence export failed | Per-invocation guest copy `/work/evidence/ose-004/runs/<id>/<mode>`, no longer deleted at the start of the next run. After `cp -R`, sha256 manifests of both copies are compared. A failed `docker logs`, a failed copy, a failed hash, an empty or differing manifest: each prints `EVIDENCE: …`, keeps the guest copy and makes `deploy.sh` exit nonzero. The guest copy is deleted only after a match. `smoke.sh` got the same treatment: a per-invocation guest directory instead of emptying `/work/evidence/smoke`, and export failure gives RC 1 | Host tests drive the real `deploy.sh` with a fake `docker`: copy fails → RC ≠ 0, guest copy kept; incomplete copy → RC ≠ 0, kept; verified copy of 2 files → RC 0, then deleted. The verified test fails against the reviewed `deploy.sh`. **Found by the new check on the guest:** the first `stale` run (`runs/20261127T132452Z-553/`) reported a mismatch. The cause was Windows Python's `print` joining manifest lines with CRLF; Git Bash strips only the trailing CR, which is why the single-file fake test had missed it. The manifest now writes LF bytes, and the fake uses two files. That run's guest copy is kept in the volume; its host copy is complete (manifests equal apart from line endings). Later exports verified 4, 4 and 10 files |
+
+Reruns after the fixes, all on `ose-guest-004`: `deploy.sh stale` RC 0; `deploy.sh all` RC 0 (deploy: GONE `0004`, then STAGE, RECV and CLEANUP `0000`, listing shows HELLO; run: `0000`/`0004`, exact SYSPRINT lines, TSO `RC=7`); `smoke.sh ipl1` RC 0 (per-run guest directory). Host: `python -I scripts/check_repo.py` RC 0; `python -m unittest discover -s tests/host` RC 0.
+
+Next action: re-review of R04-2 and R04-3; then the human decides on the merge.
