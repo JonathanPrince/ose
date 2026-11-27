@@ -22,8 +22,10 @@ over silently: `lease break` removes it explicitly, and only when stale.
 Snapshots live in artifacts/guest/snapshots/<name>/ with sha256 manifests; restore
 verifies them before touching the volume and refuses a corrupted snapshot.
 Every command logs to artifacts/guest/logs/ and exits nonzero on failure:
-  1 error, 2 usage, 3 lease held by someone else, 4 lease stale, 5 volume busy,
-  6 snapshot invalid, 7 restore failed (volume left as it was).
+  1 error, 2 usage, 3 lease held by someone else, 4 lease stale, 5 volume busy
+  (or Docker cannot say whether it is),
+  6 snapshot invalid, 7 restore failed (guest left as it was, rolled back if needed),
+  8 restore AND its rollback failed (manual recovery; the old guest is kept on the volume).
 """
 import argparse
 import datetime
@@ -48,7 +50,7 @@ LEASEDIR = Path(os.environ.get("OSE_LEASE_DIR", Path.home() / ".ose-guest" / "le
 _DOCKER_ENV = os.environ.get("OSE_DOCKER", "docker")
 DOCKER = json.loads(_DOCKER_ENV) if _DOCKER_ENV.startswith("[") else [_DOCKER_ENV]
 NAME_RX = re.compile(r"[a-z0-9][a-z0-9_.-]{0,62}")
-E_ERROR, E_USAGE, E_HELD, E_STALE, E_BUSY, E_SNAP, E_RESTORE = 1, 2, 3, 4, 5, 6, 7
+E_ERROR, E_USAGE, E_HELD, E_STALE, E_BUSY, E_SNAP, E_RESTORE, E_ROLLBACK = 1, 2, 3, 4, 5, 6, 7, 8
 
 
 class Fail(Exception):
@@ -167,7 +169,12 @@ def describe(lease):
 
 
 def running_containers(volume):
+    """IDs of running containers that mount the volume. Fails closed (R09-3): if
+    Docker cannot answer, nobody may assume the volume is idle."""
     p = docker("ps", "-q", "--filter", f"volume={volume}", check=False)
+    if p.returncode != 0:
+        raise Fail(E_BUSY, f"cannot tell whether volume {volume} is in use: docker ps failed "
+                           f"(rc {p.returncode}): {(p.stderr or '').strip()[-200:]}")
     return [c for c in p.stdout.split() if c]
 
 
@@ -220,6 +227,9 @@ def cmd_lease_release(a):
         raise Fail(E_HELD, f"no lease on {a.volume}")
     if not secrets.compare_digest(lease.get("token", ""), a.token or ""):
         raise Fail(E_HELD, f"not your lease on {a.volume}: {describe(lease)}")
+    busy = running_containers(a.volume)                 # R09-4: never release under a running guest
+    if busy:
+        raise Fail(E_BUSY, f"lease on {a.volume} kept: container(s) {busy} still run on it; stop them first")
     lease_path(a.volume).unlink()
     say(f"lease released {a.volume}")
 
@@ -339,23 +349,43 @@ def cmd_snapshot_list(a):
             print(f"{d.name}: unreadable meta.json")
 
 
-# Runs in a helper container: extract into a scratch directory on the same volume,
-# check every file against files.sha256, and only then swap directories. Any failure
-# before the swap leaves the guest untouched; a failed swap puts the old MVSCE back.
+# Runs in a helper container (RESTORE_WORK/RESTORE_SNAP override /work and /snap for
+# the host fault tests). Extract into a scratch directory on the same volume, check
+# every file against files.sha256, save the current users.conf and stage the new one
+# beside it, and only then swap. Before the swap nothing in the guest changes (exit 7).
+# After it, any failure puts the original MVSCE *and* users.conf back (exit 7). If
+# that rollback itself fails, exit 8 and say where the old guest is (R09-2).
 RESTORE_SH = r"""set -u
-R=/work/.restore-$1
-fail() { echo "restore: $*" >&2; rm -rf "$R"; exit 7; }
+W=${RESTORE_WORK:-/work}; S=${RESTORE_SNAP:-/snap}
+R="$W/.restore-$1"; G="$W/sysgen"
+had_users=0; moved_old=0; installed_new=0
+fail() { echo "restore: $*; guest unchanged" >&2; rm -rf "$R"; rm -f "$G/users.conf.new" 2>/dev/null; exit 7; }
+rollback() {
+    echo "restore: $1; rolling back" >&2
+    ok=1
+    if [ "$installed_new" = 1 ]; then mv "$G/MVSCE" "$R/MVSCE.failed" || ok=0; fi
+    if [ "$moved_old" = 1 ] && [ "$ok" = 1 ]; then mv "$R/MVSCE.previous" "$G/MVSCE" || ok=0; fi
+    if [ "$had_users" = 1 ]; then cp -p "$R/users.conf.previous" "$G/users.conf.tmp" && mv -f "$G/users.conf.tmp" "$G/users.conf" || ok=0
+    else rm -f "$G/users.conf" || ok=0; fi
+    rm -f "$G/users.conf.new" 2>/dev/null
+    if [ "$ok" = 1 ]; then rm -rf "$R"; echo "restore: rolled back; guest unchanged" >&2; exit 7; fi
+    echo "restore: ROLLBACK FAILED; manual recovery needed; the original guest is kept in $R (MVSCE.previous, users.conf.previous)" >&2
+    exit 8
+}
 rm -rf "$R" && mkdir -p "$R" || fail "cannot create $R"
-tar -C "$R" -xf /snap/guest.tar || fail "tar extraction failed"
-( cd "$R" && sha256sum -c --quiet /snap/files.sha256 ) || fail "extracted files do not match files.sha256"
-mkdir -p /work/sysgen || fail "cannot create /work/sysgen"
-if [ -e /work/sysgen/MVSCE ]; then mv /work/sysgen/MVSCE "$R/MVSCE.previous" || fail "cannot move the old MVSCE aside"; fi
-if ! mv "$R/sysgen/MVSCE" /work/sysgen/MVSCE; then
-    [ -e "$R/MVSCE.previous" ] && mv "$R/MVSCE.previous" /work/sysgen/MVSCE
-    echo "restore: swap failed; previous MVSCE put back" >&2; exit 7
+tar -C "$R" -xf "$S/guest.tar" || fail "tar extraction failed"
+( cd "$R" && sha256sum -c --quiet "$S/files.sha256" ) || fail "extracted files do not match files.sha256"
+[ -d "$R/sysgen/MVSCE" ] && [ -f "$R/sysgen/users.conf" ] || fail "snapshot has no sysgen/MVSCE or sysgen/users.conf"
+mkdir -p "$G" || fail "cannot create $G"
+if [ -e "$G/users.conf" ]; then
+    [ -f "$G/users.conf" ] && cp -p "$G/users.conf" "$R/users.conf.previous" || fail "cannot save the current users.conf"
+    had_users=1
 fi
-cp "$R/sysgen/users.conf" /work/sysgen/users.conf.new && mv /work/sysgen/users.conf.new /work/sysgen/users.conf \
-    || { echo "restore: users.conf not replaced" >&2; exit 7; }
+[ ! -e "$G/users.conf.new" ] || fail "$G/users.conf.new is in the way"
+cp "$R/sysgen/users.conf" "$G/users.conf.new" && [ -f "$G/users.conf.new" ] || fail "cannot stage users.conf"
+if [ -e "$G/MVSCE" ]; then mv "$G/MVSCE" "$R/MVSCE.previous" || fail "cannot move the old MVSCE aside"; moved_old=1; fi
+if mv "$R/sysgen/MVSCE" "$G/MVSCE"; then installed_new=1; else rollback "MVSCE swap failed"; fi
+mv -f "$G/users.conf.new" "$G/users.conf" || rollback "users.conf replacement failed"
 rm -rf "$R"
 echo restored
 """
@@ -364,6 +394,7 @@ echo restored
 def cmd_restore(a):
     check_name("volume", a.volume)
     d = verify_snapshot(a.name)                         # refuse a corrupted snapshot before anything else
+    require_lease(a.volume, a.token)                    # R09-5: ownership before any Docker change
     img = herc_image()
     exists = docker("volume", "inspect", a.volume, check=False).returncode == 0
     if not exists:
@@ -372,13 +403,15 @@ def cmd_restore(a):
         docker("volume", "create", a.volume)
         docker("run", "--rm", "--user", "0", "-v", f"{a.volume}:/work", img, "chown", "1000:1000", "/work")
         say(f"created volume {a.volume}")
-    require_lease(a.volume, a.token)
     require_stopped(a.volume)
     p = docker("run", "--rm", "--user", "1000:1000", "-v", f"{a.volume}:/work", "-v", f"{mount(d)}:/snap:ro", img,
                "sh", "-c", RESTORE_SH, "restore", str(os.getpid()), check=False)
+    if p.returncode == 8:
+        raise Fail(E_ROLLBACK, f"restore of {a.name} into {a.volume} failed AND its rollback failed: "
+                               f"{p.stderr.strip()[-400:]}")
     if p.returncode != 0 or "restored" not in p.stdout:
-        raise Fail(E_RESTORE, f"restore of {a.name} into {a.volume} failed (rc {p.returncode}): "
-                              f"{p.stderr.strip()[-300:]}; the volume's previous MVSCE was kept")
+        raise Fail(E_RESTORE, f"restore of {a.name} into {a.volume} failed (rc {p.returncode}), guest unchanged: "
+                              f"{p.stderr.strip()[-300:]}")
     say(f"restored snapshot {a.name} into {a.volume}")
 
 
@@ -432,6 +465,11 @@ def main(argv=None):
         print(f"guest.py: {e}", file=sys.stderr)
         log(f"FAIL ({e.code}): {e}")
         return e.code
+    finally:
+        global _LOG
+        if _LOG is not None:
+            _LOG.close()
+            _LOG = None
 
 
 if __name__ == "__main__":

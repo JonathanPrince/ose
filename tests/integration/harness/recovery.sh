@@ -35,19 +35,11 @@ check() { # name rc-expected rc-got
     if [ "$2" = "$3" ]; then result "$1: ok (rc $3)"; else result "$1: FAIL (expected rc $2, got $3)"; fails=$((fails + 1)); fi
 }
 
-HOLDER=$(holder_pid)
-TOK_SRC=; TOK_A=; TOK_B=
+# Leases through the shared functions (R09-4): every container this run or its
+# child scripts start carries its lease's label, and on exit, normal or not, the
+# leases are released only after those containers are stopped and confirmed gone.
+export OSE_TASK=OSE-009-recovery
 MNAME=
-release_all() {
-    # stop our own guest containers first: a lease must never be released while
-    # a container this script started still runs on the volume
-    if [ -n "$MNAME" ]; then docker rm -f "$MNAME" >/dev/null 2>&1 || true; fi
-    [ -z "$TOK_SRC" ] || GPY lease release --volume "$SRC" --token "$TOK_SRC" >/dev/null 2>&1 || true
-    [ -z "$TOK_A" ] || GPY lease release --volume "$A" --token "$TOK_A" >/dev/null 2>&1 || true
-    [ -z "$TOK_B" ] || GPY lease release --volume "$B" --token "$TOK_B" >/dev/null 2>&1 || true
-}
-trap release_all EXIT
-lease() { GPY lease acquire --volume "$1" --task OSE-009-recovery --holder-pid "$HOLDER"; }
 
 volume_manifest() { # sha256 of every guest file in a volume (to show it is unchanged)
     MSYS_NO_PATHCONV=1 docker run --rm -v "$1:/work:ro" "$HERC_IMAGE" sh -c \
@@ -56,19 +48,13 @@ volume_manifest() { # sha256 of every guest file in a volume (to show it is unch
 
 # --- 0. baseline snapshot and two disposable guests ----------------------------
 step "0: lease $SRC, $A, $B"
-TOK_SRC=$(lease "$SRC") || die "cannot lease $SRC"
-for v in "$A" "$B"; do
-    if docker volume inspect "$v" >/dev/null 2>&1; then
-        docker ps -q --filter "volume=$v" | grep -q . && die "$v has a running container"
-    fi
-done
-TOK_A=$(lease "$A") || die "cannot lease $A"
-TOK_B=$(lease "$B") || die "cannot lease $B"
+guest_lease_begin "$SRC"; TOK_SRC=$(lease_token "$SRC")   # acquire refuses a volume with running containers
+guest_lease_begin "$A";   TOK_A=$(lease_token "$A")
+guest_lease_begin "$B";   TOK_B=$(lease_token "$B")
 step "0: snapshot $SRC -> $SNAP"
 GPY snapshot create --volume "$SRC" --name "$SNAP" --token "$TOK_SRC" --note "OSE-009 recovery baseline" \
     > "$OUT/t0-snapshot.txt" 2>&1 || { cat "$OUT/t0-snapshot.txt"; die "snapshot failed"; }
 cat "$OUT/t0-snapshot.txt" >> "$OUT/summary.txt"
-GPY lease release --volume "$SRC" --token "$TOK_SRC" >/dev/null; TOK_SRC=
 for v in "$A" "$B"; do
     docker volume rm "$v" >/dev/null 2>&1 || true          # disposable: always start from the snapshot
     step "0: restore $SNAP -> $v (new volume)"
@@ -130,7 +116,7 @@ MNAME=$(guest_container ose-marker)
 GUEST_EV=/work/evidence/ose-009/runs/$RUN
 tools_image                            # pinned tools image (TOOLS_IMAGE), verified
 docker rm -f "$MNAME" >/dev/null 2>&1 || true
-MSYS_NO_PATHCONV=1 docker run -d --name "$MNAME" --user 1000:1000 -e GUEST_USER="$u" -e GUEST_PASS="$p" \
+MSYS_NO_PATHCONV=1 docker run -d --name "$MNAME" --user 1000:1000 $(guest_labels) -e GUEST_USER="$u" -e GUEST_PASS="$p" \
     -v "$(hostpath "$ROOT"):/ose:ro" -v "$A:/work" -w /work/sysgen/MVSCE "$TOOLS_IMAGE" \
     sh -c '[ ! -e "$0" ] && mkdir -p "$0" && exec python3 -I /ose/tests/integration/harness/marker.py --mode create-hold --evidence "$0" --hold 900' \
     "$GUEST_EV/create-hold" >/dev/null || die "cannot start the marker guest"

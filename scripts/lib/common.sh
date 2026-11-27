@@ -4,7 +4,7 @@
 
 ROOT=${ROOT:-$(cd "$(dirname "$0")/.." && pwd)}
 CACHE="$ROOT/artifacts/cache/src"
-EVID="$ROOT/artifacts/evidence/ose-003"
+EVID="${OSE003_EVIDENCE_DIR:-$ROOT/artifacts/evidence/ose-003}"   # tests point this elsewhere
 
 IMAGE_BASE="debian@sha256:e67eeead736ff7bbe258ef088bff683635c561b1fcfefad0806c1df4ab49ce0e"  # ADR-0003, as OSE-004
 HERCULES_COMMIT=ee86c4de066fcdb2ec898a157ff4c687c5f01ce2   # SDL Hercules Release_4.9.1
@@ -84,31 +84,82 @@ creds() {
 }
 
 # --- OSE-009 guest leases and isolation ---------------------------------------
-# Every guest-mutating script holds the lease on $DASD_VOLUME for its whole run
-# (scripts/guest/guest.py; leases are host-wide in OSE_LEASE_DIR). If the caller
-# already holds it, it passes OSE_LEASE_TOKEN and the script only checks it.
+# Every guest-mutating script holds a lease on each volume it mutates for its
+# whole run (scripts/guest/guest.py; leases are host-wide in OSE_LEASE_DIR).
+#  - guest_lease_begin [VOLUME]: lease VOLUME (default $DASD_VOLUME). For the
+#    default volume a caller that already holds the lease passes OSE_LEASE_TOKEN
+#    and the script only checks it. Each lease is remembered with its own volume
+#    and token, so cleanup never depends on a later change of DASD_VOLUME (R09-1).
+#  - Every container a script starts under a lease carries the label
+#    ose.lease=<first 16 hex of sha256(token)> (guest_labels). On exit the leases
+#    this script took are released only after all containers with their label are
+#    stopped and confirmed gone; otherwise the lease is KEPT, a recovery message is
+#    printed and the script exits nonzero (R09-4). Only containers with our own
+#    label are ever stopped.
 GUEST_PY="$ROOT/scripts/guest/guest.py"
+GUEST_LEASES=""        # space-separated volume=token=owned (owned: 1 taken here, 0 inherited)
 holder_pid() { # the Windows PID under Git Bash (MSYS PIDs are not Windows PIDs)
     if [ -r "/proc/$$/winpid" ]; then cat "/proc/$$/winpid"; else echo "$$"; fi
 }
+lease_label() { printf %s "$1" | sha256sum | cut -c1-16; }
+lease_token() { # volume -> token of a lease this script knows
+    for e in $GUEST_LEASES; do
+        if [ "${e%%=*}" = "$1" ]; then e=${e#*=}; echo "${e%%=*}"; return 0; fi
+    done
+    return 1
+}
 guest_lease_begin() {
-    if [ -n "${OSE_LEASE_TOKEN:-}" ]; then
-        "$PY" -I "$GUEST_PY" lease check --volume "$DASD_VOLUME" --token "$OSE_LEASE_TOKEN" >/dev/null \
-            || die "OSE_LEASE_TOKEN does not hold the lease on $DASD_VOLUME (see above)"
+    v=${1:-$DASD_VOLUME}
+    if [ -z "${1:-}" ] && [ -n "${OSE_LEASE_TOKEN:-}" ]; then
+        "$PY" -I "$GUEST_PY" lease check --volume "$v" --token "$OSE_LEASE_TOKEN" >/dev/null \
+            || die "OSE_LEASE_TOKEN does not hold the lease on $v (see above)"
+        GUEST_LEASES="$GUEST_LEASES $v=$OSE_LEASE_TOKEN=0"
         return 0
     fi
-    OSE_LEASE_TOKEN=$("$PY" -I "$GUEST_PY" lease acquire --volume "$DASD_VOLUME" \
-        --task "${OSE_TASK:-${0##*/}}" --holder-pid "$(holder_pid)") || die "cannot lease $DASD_VOLUME (see above)"
-    export OSE_LEASE_TOKEN
-    GUEST_LEASE_OWNED=1
+    t=$("$PY" -I "$GUEST_PY" lease acquire --volume "$v" \
+        --task "${OSE_TASK:-${0##*/}}" --holder-pid "$(holder_pid)") || die "cannot lease $v (see above)"
+    GUEST_LEASES="$GUEST_LEASES $v=$t=1"
+    if [ -z "${1:-}" ]; then OSE_LEASE_TOKEN=$t; export OSE_LEASE_TOKEN; fi   # children inherit the primary lease
     trap guest_lease_end EXIT
 }
-guest_lease_end() {
-    if [ "${GUEST_LEASE_OWNED:-}" = 1 ]; then
-        "$PY" -I "$GUEST_PY" lease release --volume "$DASD_VOLUME" --token "$OSE_LEASE_TOKEN" >/dev/null \
-            || echo "${0##*/}: could not release the lease on $DASD_VOLUME" >&2
-        GUEST_LEASE_OWNED=
+# --label for a container on $DASD_VOLUME, from the lease this script holds on it
+guest_labels() {
+    t=$(lease_token "$DASD_VOLUME") || die "no lease known for $DASD_VOLUME: call guest_lease_begin first"
+    echo "--label ose.lease=$(lease_label "$t")"
+}
+# stop every container carrying label ose.lease=$1 and confirm none is left; RC 1 if
+# Docker cannot answer or a container survives
+stop_labelled() {
+    ids=$(docker ps -q --filter "label=ose.lease=$1") || return 1
+    if [ -n "$ids" ]; then
+        # shellcheck disable=SC2086
+        docker stop -t 30 $ids >/dev/null 2>&1 || true
     fi
+    n=0
+    while :; do
+        left=$(docker ps -q --filter "label=ose.lease=$1") || return 1
+        [ -z "$left" ] && return 0
+        n=$((n + 1)); [ "$n" -lt "${GUEST_STOP_TRIES:-20}" ] || return 1    # 20 x 3 s by default
+        sleep 3
+    done
+}
+guest_lease_end() {
+    rc=$?
+    bad=0
+    for e in $GUEST_LEASES; do
+        v=${e%%=*}; r=${e#*=}; t=${r%%=*}; owned=${r#*=}
+        [ "$owned" = 1 ] || continue
+        if ! stop_labelled "$(lease_label "$t")"; then
+            echo "${0##*/}: lease on $v KEPT: containers started under it may still run (docker ps --filter label=ose.lease=$(lease_label "$t")); recovery needed before releasing" >&2
+            bad=1; continue
+        fi
+        "$PY" -I "$GUEST_PY" lease release --volume "$v" --token "$t" >/dev/null \
+            || { echo "${0##*/}: lease on $v KEPT: release refused (see above)" >&2; bad=1; }
+    done
+    GUEST_LEASES=""
+    trap - EXIT
+    if [ "$bad" -ne 0 ]; then [ "$rc" -ne 0 ] && exit "$rc"; exit 1; fi
+    exit "$rc"
 }
 # container name for this volume, so guests on different volumes never collide
 guest_container() { echo "$1-$DASD_VOLUME"; }
@@ -145,7 +196,7 @@ guest_run() {
     [ -n "$u" ] && [ -n "$p" ] && [ "$u" != "$p" ] || die "no MVSCE02 entry in users.conf"
     docker rm -f "$NAME" >/dev/null 2>&1 || true
     # shellcheck disable=SC2046
-    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 $(guest_ports) \
+    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 $(guest_labels) $(guest_ports) \
         -e GUEST_USER="$u" -e GUEST_PASS="$p" \
         -v "$(hostpath "$ROOT"):/ose:ro" -v "$DASD_VOLUME:/work" -w /work/sysgen/MVSCE "$TOOLS_IMAGE" \
         sh -c '[ ! -e "$0" ] && mkdir -p "$0" && s=$1 && shift && exec python3 -I "$s" --evidence "$0" "$@"' \

@@ -33,7 +33,7 @@ start() { # extra env as KEY=VALUE args
     envs=""
     for kv in "$@"; do envs="$envs -e $kv"; done
     # shellcheck disable=SC2086
-    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 \
+    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 $(guest_labels) \
         -e SYSGEN_COMMIT="$SYSGEN_COMMIT" -e RAKF_COMMIT="$RAKF_COMMIT" -e MVP_COMMIT="$MVP_COMMIT" $envs \
         -v "$(hostpath "$ROOT"):/ose:ro" -v "$DASD_VOLUME:/work" -w /work \
         "$HERC_IMAGE" bash /ose/scripts/lib/sysgen-in-container.sh >/dev/null
@@ -69,16 +69,21 @@ case "${1:-run}" in
         MSYS_NO_PATHCONV=1 docker run --rm -v "$DASD_VOLUME:/work:ro" "$HERC_IMAGE" sh -c 'tail -5 /work/evidence/wrapper.log; tail -3 /work/sysgen/sysgen.log 2>/dev/null' ;;
     export) export_out ;;
     negative-pin)
-        guest_lease_begin            # OSE-009: the source volume
         # On a copy of the leased volume: a --step restart restores step-8 DASD,
-        # which must not touch the finished system.
+        # which must not touch the finished system. R09-1: the copy target is a
+        # guest volume too, so it is leased on its own BEFORE it is removed,
+        # recreated or started, and each lease keeps its own identity for cleanup.
+        SRC=$DASD_VOLUME
+        NEG="${SRC}-negpin"
+        guest_lease_begin                 # OSE-009: the source volume (read)
+        guest_lease_begin "$NEG"          # OSE-009: the target volume (replaced, then run)
         mkdir -p "$EVID"; prepare
-        NEG="${DASD_VOLUME}-negpin"
         docker volume rm -f "$NEG" >/dev/null 2>&1 || true
         docker volume create "$NEG" >/dev/null
-        MSYS_NO_PATHCONV=1 docker run --rm --user 0 -v "$DASD_VOLUME:/from:ro" -v "$NEG:/to" "$HERC_IMAGE" \
+        MSYS_NO_PATHCONV=1 docker run --rm --user 0 -v "$SRC:/from:ro" -v "$NEG:/to" "$HERC_IMAGE" \
             sh -c 'cp -a /from/. /to/ && chown -R 1000:1000 /to && rm -rf /to/evidence'
         DASD_VOLUME=$NEG
+        NAME=$(guest_container ose-sysgen-run)   # the container belongs to the target volume
         start ATTEMPTS=1 TIMEOUT="${TIMEOUT:-3600}" MVP_PIN_OVERRIDE=0000000000000000000000000000000000000000 \
             CONTINUE_FLAG= SYSGEN_STEP=step_09_mvp
         rc=$(wait_rc negative-pin)

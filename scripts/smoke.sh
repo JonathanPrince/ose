@@ -14,7 +14,7 @@ run_ipl() { # tag, extra args for mvs-smoke.py
     tag=$1; shift
     docker rm -f "$NAME" >/dev/null 2>&1 || true
     # shellcheck disable=SC2086
-    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 $(guest_ports) \
+    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 $(guest_labels) $(guest_ports) \
         -v "$(hostpath "$ROOT"):/ose:ro" -v "$DASD_VOLUME:/work" -w /work/sysgen/MVSCE "$TOOLS_IMAGE" \
         python3 -I /ose/scripts/lib/mvs-smoke.py --mvsce /work/sysgen/MVSCE --evidence "$SMOKE_EV" --tag "$tag" "$@" >/dev/null
 }

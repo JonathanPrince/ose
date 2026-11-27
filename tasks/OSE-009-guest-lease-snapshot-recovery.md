@@ -1,5 +1,5 @@
 # OSE-009 — Guest lease, snapshot and recovery harness
-Status: REVIEW (dc83bd5 independent positive recovery repeat passed; changes requested R09-1 through R09-6; manual lease protocol remains mandatory)
+Status: IMPLEMENTED (R09-1..R09-6 fixed 2026-11-27 with regression tests and guest reruns; awaiting re-review; manual lease protocol remains mandatory)
 Milestone: M0a (generic platform)
 Dependencies: OSE-003
 Owner: coordinator session (standard tier)
@@ -102,3 +102,32 @@ Next action: fix the six findings at high tier and add targeted failure regressi
 Independent summary has 15 RESULT checks, all passing.
 
 Reviewer evidence manifest: `artifacts/evidence/review-ose-009/REVIEW-SHA256SUMS`, 156 files; SHA-256 `545af9ac49b34a4de6189a77146dc921d6cb92c121073761df4e3e5bfe12a1ff`.
+
+### Rework after review r1 (R09-1..R09-6), 2026-11-27, author
+Baseline: review/OSE-009-r1 at 613f777 (fast-forwarded). The manual `Guest lease:` line was set for the guest runs and released afterwards; the manual protocol stays in force.
+
+| Finding | Fix | Regression evidence |
+|---|---|---|
+| R09-1 (P1) negative-pin target unleased | `sysgen.sh negative-pin` leases `<source>-negpin` itself before `volume rm`, copy or start. `common.sh` keeps a list of leases, each with its own volume and token, so cleanup no longer depends on `DASD_VOLUME`. The container is named for the target. | `ShellLeases`, real `sysgen.sh negative-pin` with fake docker/git: target leased by OTHER-REVIEW-HOLDER → RC≠0, no `volume rm`, no `run -d`, source lease released, the other lease untouched. Normal path → both leased, `ose-sysgen-run-<target>` started with the target's label, `ps` of the target checked before `volume rm`, both leases released |
+| R09-2 (P1) late restore failure left a mixed guest | `RESTORE_SH` saves `users.conf` and stages the new one before `MVSCE` moves. After the swap, any failure restores `MVSCE` and `users.conf` (RC 7). A failed rollback is RC 8, with the old guest kept in `.restore-<pid>/`, mapped to `guest.py` RC 8. `RESTORE_WORK`/`RESTORE_SNAP` allow tests outside the container. | `RestoreScript`: the real script under bash with an `mv` wrapper keyed on source paths. Success replaces both; checksum mismatch and a blocked `users.conf.new` (the reviewer's case) change nothing; a late `users.conf` failure rolls back both to the exact original bytes; a failed rollback returns 8 and keeps the old pair. The same four cases in the pinned image via `tests/integration/harness/restore_faults_in_image.py` → RC 0, all as expected (`rework-r1/restore-faults-in-image.json`) |
+| R09-3 (P1) `docker ps` failure read as idle | `running_containers` raises RC 5 when `docker ps` fails. Acquire, release, snapshot and restore all stop. | `test_docker_ps_failure_blocks_acquire`, `…_blocks_release` |
+| R09-4 (P2) lease released under running containers | Containers started under a lease carry `--label ose.lease=<16 hex of sha256(token)>`. `guest_lease_end` stops only containers with its own label, confirms they are gone, then releases. Otherwise it prints `lease on V KEPT … recovery needed` and exits nonzero. `lease release` refuses while any container runs on the volume. `recovery.sh` uses the same functions, which covers the children's smoke containers. | `ShellLeases`, real `audit-listing.sh`: `docker wait` RC 17 → our container stopped before the release, lease gone; a container that does not stop → lease KEPT, RC≠0; normal run → released. `test_release_refused_while_a_container_runs`. Real guest run: the smoke containers carried their own volume's label (`docker inspect`) |
+| R09-5 (P2) `restore --create` mutated Docker before the lease check | `require_lease` moved ahead of `volume inspect/create/chown` | `test_restore_create_with_wrong_token_makes_no_docker_call`, `…_without_any_lease_…`: zero Docker calls |
+| R09-6 (P2) whole-environment patching in tests | `load_guest` sets `LEASEDIR`/`SNAPDIR`/`LOGDIR` on the module. Shell tests pass a child environment only. | `test_environment_untouched`; full suite with the reviewer's command `OSE_BASH=… python -I -m unittest discover -s tests/host` → **126 tests OK**, no ResumeAdmission errors |
+
+Other changes: `EVID` in `common.sh` can be overridden (`OSE003_EVIDENCE_DIR`), so the fake `negative-pin` test cannot write into OSE-003's checksummed evidence. `GUEST_STOP_TRIES` sets the stop-confirmation wait. `guest.py` closes its log on exit. The runbook marks Linux hosts unverified and documents RC 7/8, lease-kept recovery and fail-closed Docker.
+
+| Check | RC | Result |
+|---|---|---|
+| `python -m unittest tests.host.test_guest_harness` | 0 | 36 tests |
+| the same 36 tests against the reviewed `dc83bd5` (scratch worktree, new test file only) | — | **15 fail or error**, covering R09-1..R09-5 |
+| `OSE_BASH="C:/Program Files/Git/bin/bash.exe" python -I -m unittest discover -s tests/host` | 0 | 126 tests |
+| `python -I scripts/check_repo.py` | 0 | |
+| `python -I tests/integration/harness/restore_faults_in_image.py --out artifacts/evidence/ose-009/rework-r1` | 0 | success 0, staging-blocked 7, late failure 7 rolled back, rollback failure 8 with the old guest kept |
+| `sh tests/integration/harness/recovery.sh` (real guests) | 0 | 15/15 RESULT ok: concurrent smokes and both ports; marker, `kill -9`, survived, restore, smoke, gone; corrupted snapshot refused with the volume unchanged. `runs/20261127T165549Z-1614/` (`SHA256SUMS` 31 entries, `963ccbd29d105ad046828c9b961cb2c29643c263b9337fa851d9b7be3769f54f`); afterwards no running container and no lease |
+
+Evidence for the rework: `artifacts/evidence/ose-009/rework-r1/` (`SHA256SUMS` 2 entries, `c07e8c1a2d196f2e51e23fccfb3970eff26c22ca670817c031a9ec2cc7f840e4`).
+
+Not run: Linux host; a full 50-minute `sysgen.sh run` with the lease (the shell path is covered by the fake-backend tests); leases across two hosts.
+
+Next action: re-review of R09-1..R09-6; after acceptance, the human decides on merge. The manual `Guest lease:` protocol stays until then.
