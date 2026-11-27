@@ -8,13 +8,13 @@
 set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 . "$ROOT/scripts/lib/common.sh"
-NAME=ose-smoke
+NAME=$(guest_container ose-smoke)
 SMOKE_EV=   # per invocation, set below with RUN_OUT
 run_ipl() { # tag, extra args for mvs-smoke.py
     tag=$1; shift
     docker rm -f "$NAME" >/dev/null 2>&1 || true
     # shellcheck disable=SC2086
-    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 \
+    MSYS_NO_PATHCONV=1 docker run -d --name "$NAME" --user 1000:1000 $(guest_labels) $(guest_ports) \
         -v "$(hostpath "$ROOT"):/ose:ro" -v "$DASD_VOLUME:/work" -w /work/sysgen/MVSCE "$TOOLS_IMAGE" \
         python3 -I /ose/scripts/lib/mvs-smoke.py --mvsce /work/sysgen/MVSCE --evidence "$SMOKE_EV" --tag "$tag" "$@" >/dev/null
 }
@@ -75,6 +75,7 @@ RUN_OUT="$EVID/smoke-runs/$(date -u +%Y%m%dT%H%M%SZ)-$$"
 [ ! -e "$RUN_OUT" ] || die "$RUN_OUT exists"
 mkdir -p "$RUN_OUT"
 SMOKE_EV="/work/evidence/smoke-runs/${RUN_OUT##*/}"
+guest_lease_begin                      # OSE-009: exclusive use of $DASD_VOLUME
 log "evidence: $RUN_OUT (guest copy $DASD_VOLUME:$SMOKE_EV)"
 case "${1:-all}" in
     ipl1) ipl1; rc=$? ;;

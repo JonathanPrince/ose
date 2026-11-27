@@ -21,6 +21,7 @@ OUT="${OSE004_EVIDENCE_ROOT:-$ROOT/artifacts/evidence/ose-004/guest}/runs/$(date
 [ ! -e "$OUT" ] || die "$OUT exists"
 RUN_ID=${OUT##*/}
 GUEST_EV=/work/evidence/ose-004/runs/$RUN_ID   # the guest copy, one per invocation too
+case "${1:-all}" in deploy|run|stale|all) guest_lease_begin ;; esac   # OSE-009
 check_xmit() {
     [ -f "$XMIT" ] || die "no $XMIT: run make build first"
     got=$("$PY" -I -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$XMIT")

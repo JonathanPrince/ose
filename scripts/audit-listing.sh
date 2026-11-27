@@ -13,4 +13,5 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT="${OSE011_EVIDENCE_ROOT:-$ROOT/artifacts/evidence/ose-011/guest}/runs/$(date -u +%Y%m%dT%H%M%SZ)-$$"
 [ ! -e "$OUT" ] || die "$OUT exists"
 GUEST_EV=/work/evidence/ose-011/runs/${OUT##*/}
+guest_lease_begin                      # OSE-009: exclusive use of $DASD_VOLUME
 guest_run ose-audit /ose/tests/guest/audit/run_listing.py listing
