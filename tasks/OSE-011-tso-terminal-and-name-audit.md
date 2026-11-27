@@ -1,5 +1,5 @@
 # OSE-011 — TSO terminal API and name-collision audit
-Status: VERIFIED (source and guest listing accepted; 5815701 closes R11G-2 on 2026-11-27; human merge pending)
+Status: MERGED (VERIFIED: source part 2026-11-26, guest listing at 5815701 2026-11-27; merged to main 2026-11-27 on the human maintainer's instruction)
 Milestone: M0
 Dependencies: OSE-002; OSE-003 for the guest listing
 Owner: author model (standard tier)

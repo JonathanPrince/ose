@@ -1,6 +1,6 @@
 # Project status
 
-Updated: 2026-11-27 by the coordinator (OSE-004 guest part merged to main on the human maintainer's instruction; reusable-MVP spec direction cherry-picked)
+Updated: 2026-11-27 by the coordinator (OSE-011 guest listing merged to main on the human maintainer's instruction)
 Milestone: **M0, Reproducible baseline and source audit**: in progress
 Guest lease: none held (released by OSE-011 rework, 2026-11-27). Stopped volumes: ose-sysgen-1 (reference build), ose-sysgen-2, ose-sysgen-3, ose-guest-004, ose-guest-011, reviewer volumes. The next guest task must take the lease first.
 
@@ -11,7 +11,7 @@ Merged to main after independent review (2026-11-26):
 - **OSE-013:** pin enforcement, host-verified.
 - **OSE-005:** UFSD source audit.
 - **OSE-012:** libc370 inventory and compile probes.
-- **OSE-011:** terminal audit, source part. The guest listing is still open.
+- **OSE-011:** terminal audit (source part) and the guest name-collision listing: no collision for the candidate names on the pinned image (research tso-terminal-audit N-4).
 - **OSE-004:** CC/370 toolchain and a reproducible hello load module, host part. Guest acceptance tests 2–4 are still open.
 
 **Guest images now exist.** OSE-003 implementation and an independent clean-build/IPL/JES/TSO repeat have passed their positive checks; the harness has five open review findings. `src/` holds only the OSE-004 test program `src/utils/hello/hello.c`.
@@ -43,7 +43,7 @@ Merged to main after independent review (2026-11-26):
 | OSE-008 | Execution model and runtime audit | BACKLOG | high | — |
 | OSE-009 | Guest lease, snapshot, recovery | BACKLOG | standard | — |
 | OSE-010 | M0 gate review | BACKLOG | high and human | — |
-| OSE-011 | TSO terminal and name audit | VERIFIED (5815701 re-review accepted; source and guest listing accepted; human merge pending) | economy → standard | coordinator |
+| OSE-011 | TSO terminal and name audit | MERGED (VERIFIED; source part and guest listing: no name collision) | economy → standard | coordinator |
 | OSE-012 | C subset and libc POSIX inventory | MERGED (VERIFIED, static inventory and compile probes) | economy, standard review | — |
 | OSE-013 | Enforce MVP and RAKF pins | MERGED (VERIFIED; end-to-end OSE-003 test 7 passed and merged) | standard | — |
 
